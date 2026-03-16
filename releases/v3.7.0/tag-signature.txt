@@ -22,9 +22,9 @@ qyuNg2PVvpNUqy9ITTVm8QxN
 -----END PGP SIGNATURE-----
 
 commit 68f9d7ceecf32ca6b7fada2ba01bcd782fbc3bcd
-gpg: 签名建立于 一  3月/16 20:37:33 2026 CST
-gpg:               使用 RSA 密钥 7A7F3D5D77C4039B860AFA10186770307005E4DC
-gpg: 完好的签名，来自于 “Jiangnan Zhang (Visual Release Signing) <zjn.2006@foxmail.com>” [绝对]
+gpg: Signature made Mon Mar 16 20:37:33 2026 CST
+gpg:                using RSA key 7A7F3D5D77C4039B860AFA10186770307005E4DC
+gpg: Good signature from "Jiangnan Zhang (Visual Release Signing) <zjn.2006@foxmail.com>" [ultimate]
 Author: JiangnanZhang-2006 <zjn.2006@foxmail.com>
 Date:   Mon Mar 16 20:37:33 2026 +0800
 

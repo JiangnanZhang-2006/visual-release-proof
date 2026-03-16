@@ -1,6 +1,6 @@
 pub   rsa4096 2026-03-16 [SC]
       7A7F 3D5D 77C4 039B 860A  FA10 1867 7030 7005 E4DC
-uid             [ 绝对 ] Jiangnan Zhang (Visual Release Signing) <zjn.2006@foxmail.com>
+uid           [ultimate] Jiangnan Zhang (Visual Release Signing) <zjn.2006@foxmail.com>
 sub   rsa4096 2026-03-16 [E]
       BD42 1014 9C95 B8C3 519D  C57E 1FEF DD30 406F C4DF
 
