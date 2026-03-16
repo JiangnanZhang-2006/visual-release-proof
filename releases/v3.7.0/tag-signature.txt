@@ -1,0 +1,785 @@
+tag v3.7.0
+Tagger: JiangnanZhang-2006 <zjn.2006@foxmail.com>
+Date:   Mon Mar 16 20:37:51 2026 +0800
+
+Release v3.7.0
+-----BEGIN PGP SIGNATURE-----
+
+iQJPBAABCAA5FiEEen89XXfEA5uGCvoQGGdwMHAF5NwFAmm3+Z8bFIAAAAAABAAO
+bWFudTIsMi41KzEuMTIsMCwzAAoJEBhncDBwBeTcqeUP+gLf1i1CLH2IatdwMyrx
+cDAMvZ0bPuhsQAezl2VPTOD/aKyVCf9WCfX1R6OEQ64215+x5dgX5WyXXhdg8WKS
+w1SLMnmGso6ojIM1xK76Jrj7YBmFogUc7QbgW13EHv7ZSCt6DW5QyYYbYZhpMQrK
+aFgUwExM/2HXnfr8zHr25K6I/eoTTxszfd/YjTT1xkxcmOxgOAS7IjkohQgVeG1d
+4/S+VX+UyIfEfCVR7+4M5EDnj1szL1nKe5yjZErsnX8JetqTF3IvFYnEkqVxG0+x
+4Bp759WsQ+1ByRfbNUzHcGKphmybH/rI2xvqXnfHpd2pYFxLTirPKTVcwBPfw0vX
+QWTIBhMvFhq2t/G8Hyd3kRYN/NOz/f0RENuPrY2hBR2TAi/Q+FXHJ2tDfMzruS58
+6OhzHF7jNOHgMpI7FVEuA9zhdYPilqCHF5fIdYUc9/xvE2iEWlWcEDZFGk1//TV/
+UpJKDvSRC8CIJFAUxz0rh29virlewE0C3tycZ64qwnRIY3Bl6v7OPxCgwks+gH4l
+7trzu05dwgrPVPWjiJJsTitC2YQI1nV8a4eIq2VMFy9mi18f0qBgapNnuenTx4gd
+kt+N8R17FS2i7m+Dh74UA6NqLttRn8vHrBjHRbQNizBUQFU9EgoOa/B61z7/rkm/
+qyuNg2PVvpNUqy9ITTVm8QxN
+=38og
+-----END PGP SIGNATURE-----
+
+commit 68f9d7ceecf32ca6b7fada2ba01bcd782fbc3bcd
+gpg: 签名建立于 一  3月/16 20:37:33 2026 CST
+gpg:               使用 RSA 密钥 7A7F3D5D77C4039B860AFA10186770307005E4DC
+gpg: 完好的签名，来自于 “Jiangnan Zhang (Visual Release Signing) <zjn.2006@foxmail.com>” [绝对]
+Author: JiangnanZhang-2006 <zjn.2006@foxmail.com>
+Date:   Mon Mar 16 20:37:33 2026 +0800
+
+    release: v3.7.0
+    Add split selection for pose and phone detection models, harden model selector initialization flow, and document private-source public-proof release workflow.
+
+diff --git a/.cursor/skills/version-bump-control/SKILL.md b/.cursor/skills/version-bump-control/SKILL.md
+index cf08ff1..ece516a 100644
+--- a/.cursor/skills/version-bump-control/SKILL.md
++++ b/.cursor/skills/version-bump-control/SKILL.md
+@@ -76,6 +76,43 @@ description: Analyze code change scope and choose the next pragmatic semantic ve
+ 6. **结果汇报**
+    - 输出：判定级别、判定依据、旧版本 -> 新版本、已更新文件列表
+ 
++## 发布流程（私有源码 + 公开证明，默认）
++
++当用户提到“发布 / release”时，除版本更新外，默认执行以下发布链路：
++
++1. **私有源码仓库发布**
++   - 完成版本更新后提交代码（如用户要求提交）。
++   - 为版本创建 GPG 签名 Tag：
++     - `git tag -s vX.Y.Z -m "Release vX.Y.Z"`
++   - 本地验证签名：
++     - `git verify-tag vX.Y.Z`
++     - `git show vX.Y.Z --show-signature`
++   - 推送私有源码仓库（如用户要求推送）：
++     - `git push -u origin main`
++     - `git push origin vX.Y.Z`
++
++2. **导出公开证明材料（不含源码）**
++   - 使用工具导出：
++     - `python scripts/tools/export_release_proof.py vX.Y.Z <signer_email>`
++     - 或 `make export-proof`（默认最新 tag）
++   - 导出目录：`release-proof/vX.Y.Z/`
++   - 导出文件至少包含：
++     - `PUBLIC_RELEASE_PROOF.md`
++     - `tag-signature.txt`
++     - `tag-verify.txt`
++     - `gpg-fingerprint.txt`
++     - `public-key.asc`
++
++3. **同步到 public release proof 仓库**
++   - 将 `release-proof/vX.Y.Z/` 上传到公开仓库（如 `visual-release-proof`）。
++   - 公开仓库应只包含证明材料，不包含私有源码。
++   - 对外公布：版本 tag、公钥指纹、验证命令。
++
++4. **发布验收标准**
++   - `git verify-tag vX.Y.Z` 显示 `Good signature`。
++   - 公开仓库存在对应版本目录与验证说明。
++   - 第三方无需访问私有源码即可完成发布者身份验证。
++
+ ## CHANGELOG 追加模板
+ 
+ ```markdown
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 2c5178a..1370565 100755
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,22 @@
+ # 更新日志
+ 
++## [3.7.0] - 2026-03-16
++
++### 变更
++
++- ✨ **模型选择器支持双模型分离配置（向后兼容）**
++  - 启动界面支持分别选择姿态模型（`models.yolo.model_path`）与手机检测模型（`models.yolo.detect_model_path`）
++  - 新增“自动推导检测模型（`*-pose.pt -> *.pt`）”交互，支持一键回填检测模型路径
++  - `main.py` 模型选择流程升级为动作化返回（confirm/use_default/cancel/error），取消或异常时继续沿用当前配置
++
++### 修复
++
++- 🐛 **修复模型选择器初始化顺序导致的属性缺失**
++  - 修复 `auto_detect_var` 尚未初始化即触发扫描逻辑的问题，避免启动时报 `ModelSelector has no attribute 'auto_detect_var'`
++  - 增加扫描阶段属性可用性兜底检查，降低界面初始化阶段异常风险
++
++---
++
+ ## [3.6.0] - 2026-03-13
+ 
+ ### 变更
+diff --git a/Makefile b/Makefile
+index 114aafc..8a8cc51 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,6 +1,6 @@
+ POETRY ?= poetry
+ 
+-.PHONY: install run api sync-deps
++.PHONY: install run api sync-deps export-proof
+ 
+ install:
+ 	$(POETRY) install
+@@ -13,3 +13,6 @@ api:
+ 
+ sync-deps:
+ 	bash scripts/tools/export_requirements.sh
++
++export-proof:
++	python scripts/tools/export_release_proof.py
+diff --git a/VERSION b/VERSION
+index 40c341b..7c69a55 100755
+--- a/VERSION
++++ b/VERSION
+@@ -1 +1 @@
+-3.6.0
++3.7.0
+diff --git a/docs/RELEASE_SIGNING.md b/docs/RELEASE_SIGNING.md
+index 5d2dce1..64d8593 100644
+--- a/docs/RELEASE_SIGNING.md
++++ b/docs/RELEASE_SIGNING.md
+@@ -94,6 +94,34 @@ git show v3.6.1 --show-signature
+ - 对应版本的 tag 名称（例如 `vX.Y.Z`）
+ - 验证命令示例与失败判定标准
+ 
++## 折中方案（私有代码仓库 + 公开证明仓库）
++
++当代码仓库需要保持私有，但你仍希望外部能验证“这是你发布的”，推荐使用以下配置：
++
++1. 私有仓库中完成正常发布（签名 tag）
++2. 导出不含源码的证明材料到 `release-proof/<tag>/`
++3. 将该目录上传到公开证明仓库或公开 Release 页面
++
++导出命令：
++
++```bash
++# 自动取最新 tag
++make export-proof
++
++# 或显式指定 tag / 签名邮箱
++python scripts/tools/export_release_proof.py v3.6.1 zjn.2006@foxmail.com
++```
++
++导出的公开材料包括：
++
++- `PUBLIC_RELEASE_PROOF.md`：第三方验证说明
++- `tag-signature.txt`：`git show <tag> --show-signature` 输出
++- `tag-verify.txt`：`git verify-tag <tag>` 输出
++- `gpg-fingerprint.txt`：公钥指纹（若可导出）
++- `public-key.asc`：公钥文件（若可导出）
++
++验证方不需要访问私有源码，只需按 `PUBLIC_RELEASE_PROOF.md` 中步骤执行验签，即可完成发布者身份核验。
++
+ ## 试发布演练记录
+ 
+ ### 演练时间
+diff --git a/main.py b/main.py
+index f901bc6..01822da 100755
+--- a/main.py
++++ b/main.py
+@@ -13,13 +13,12 @@ warnings.filterwarnings('ignore', message='.*FlashAttention.*is not available.*'
+ warnings.filterwarnings('ignore', message='.*Using scaled_dot_product_attention instead.*')
+ 
+ 
+-def _resolve_model_selection(model_selection):
+-    """统一模型决议，避免 UI 值与运行时策略冲突。"""
+-    model_path, use_yolov13_repo = model_selection
++def _resolve_repo_usage(model_path, use_yolov13_repo):
++    """统一决议仓库开关，避免 UI 值与运行时策略冲突。"""
+     selected_model_name = os.path.basename(model_path).lower() if model_path else ""
+     if selected_model_name and "yolov13" not in selected_model_name:
+-        use_yolov13_repo = False
+-    return model_path, use_yolov13_repo
++        return False
++    return use_yolov13_repo
+ 
+ 
+ def main():
+@@ -42,30 +41,34 @@ def main():
+     
+     try:
+         print("正在显示模型选择对话框...")
+-        model_selection = select_model()
+-        
+-        if model_selection is None:
+-            print("用户取消了模型选择，退出程序")
+-            return
+-        
+-        model_path, use_yolov13_repo = _resolve_model_selection(model_selection)
+-        
+-        if model_path is not None:
++        current_model_path = config.get("models.yolo.model_path")
++        current_detect_model_path = config.get("models.yolo.detect_model_path")
++        action, model_path, detect_model_path, use_yolov13_repo = select_model(
++            current_model_path,
++            current_detect_model_path,
++        )
++
++        if action == "confirm":
++            use_yolov13_repo = _resolve_repo_usage(model_path, use_yolov13_repo)
+             print(f"✓ 用户选择的模型: {model_path}")
+-            config.set('models.yolo.model_path', model_path)
++            config.set("models.yolo.model_path", model_path)
++            if detect_model_path is not None:
++                config.set("models.yolo.detect_model_path", detect_model_path)
++                print(f"✓ 手机检测模型: {detect_model_path}")
+             if use_yolov13_repo is not None:
+-                config.set('models.yolo.use_yolov13_repo', use_yolov13_repo)
++                config.set("models.yolo.use_yolov13_repo", use_yolov13_repo)
+             print(f"✓ 使用 YOLOv13 本地仓库: {'是' if use_yolov13_repo else '否'}")
++        elif action == "use_default":
++            print("✓ 保持配置文件中的默认模型设置（不覆盖当前配置）")
++        elif action == "cancel":
++            print("✓ 用户取消模型选择，继续使用当前配置")
+         else:
+-            print("✓ 使用配置文件中的默认模型设置")
+-            if use_yolov13_repo is not None:
+-                config.set('models.yolo.use_yolov13_repo', use_yolov13_repo)
+-                print(f"✓ 使用 YOLOv13 本地仓库: {'是' if use_yolov13_repo else '否'}")
++            print("⚠ 模型选择器异常，继续使用当前配置")
+         
+         print()
+     except Exception as e:
+         print(f"模型选择对话框错误: {e}")
+-        print("将使用配置文件中的默认模型设置")
++        print("将继续使用当前配置")
+         traceback.print_exc()
+         print()
+     
+diff --git a/pyproject.toml b/pyproject.toml
+index 73a0a6d..49a3a17 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -1,6 +1,6 @@
+ [project]
+ name = "visual-cheating-detection"
+-version = "3.6.0"
++version = "3.7.0"
+ description = "Real-time proctoring and cheating detection system."
+ readme = "README.md"
+ authors = [{ name = "Visual Team" }]
+diff --git a/scripts/tools/export_release_proof.py b/scripts/tools/export_release_proof.py
+new file mode 100644
+index 0000000..6d65aee
+--- /dev/null
++++ b/scripts/tools/export_release_proof.py
+@@ -0,0 +1,137 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import argparse
++import datetime as dt
++import pathlib
++import shutil
++import subprocess
++import sys
++
++
++ROOT_DIR = pathlib.Path(__file__).resolve().parents[2]
++
++
++def run(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess[str]:
++    return subprocess.run(
++        cmd,
++        cwd=ROOT_DIR,
++        text=True,
++        capture_output=True,
++        check=check,
++    )
++
++
++def detect_latest_tag() -> str:
++    result = run(["git", "describe", "--tags", "--abbrev=0"], check=False)
++    return result.stdout.strip() if result.returncode == 0 else ""
++
++
++def file_write(path: pathlib.Path, content: str) -> None:
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text(content, encoding="utf-8")
++
++
++def main() -> int:
++    parser = argparse.ArgumentParser(
++        description="Export public release proof package without source code."
++    )
++    parser.add_argument("tag", nargs="?", default="", help="Release tag, e.g. v3.6.1")
++    parser.add_argument(
++        "signer_email",
++        nargs="?",
++        default="",
++        help="Signer email used by GPG public key export",
++    )
++    args = parser.parse_args()
++
++    inside_repo = run(["git", "rev-parse", "--is-inside-work-tree"], check=False)
++    if inside_repo.returncode != 0:
++        print("Error: current directory is not a git repository.")
++        return 1
++
++    tag = args.tag or detect_latest_tag()
++    if not tag:
++        print("Error: no tag provided and no existing tags found.")
++        print("Usage: python scripts/tools/export_release_proof.py <tag> [signer_email]")
++        return 1
++
++    tag_exists = run(["git", "rev-parse", "-q", "--verify", f"refs/tags/{tag}"], check=False)
++    if tag_exists.returncode != 0:
++        print(f"Error: tag '{tag}' does not exist.")
++        return 1
++
++    signer_email = args.signer_email
++    if not signer_email:
++        signer_email = run(["git", "show", "-s", "--format=%ae", f"{tag}^{{commit}}"]).stdout.strip()
++
++    out_dir = ROOT_DIR / "release-proof" / tag
++    out_dir.mkdir(parents=True, exist_ok=True)
++
++    commit_sha = run(["git", "rev-list", "-n", "1", tag]).stdout.strip()
++    author_name = run(["git", "show", "-s", "--format=%an", commit_sha]).stdout.strip()
++    author_email = run(["git", "show", "-s", "--format=%ae", commit_sha]).stdout.strip()
++    commit_date = run(
++        ["git", "show", "-s", "--format=%ad", "--date=iso-strict", commit_sha]
++    ).stdout.strip()
++    generated_at = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
++
++    tag_signature = run(["git", "show", tag, "--show-signature"], check=False)
++    file_write(out_dir / "tag-signature.txt", tag_signature.stdout + tag_signature.stderr)
++
++    tag_verify = run(["git", "verify-tag", tag], check=False)
++    file_write(out_dir / "tag-verify.txt", tag_verify.stdout + tag_verify.stderr)
++
++    if shutil.which("gpg"):
++        gpg_fingerprint = run(["gpg", "--fingerprint", signer_email], check=False)
++        file_write(
++            out_dir / "gpg-fingerprint.txt",
++            gpg_fingerprint.stdout + gpg_fingerprint.stderr,
++        )
++
++        gpg_export = run(["gpg", "--armor", "--export", signer_email], check=False)
++        if gpg_export.returncode == 0 and gpg_export.stdout.strip():
++            file_write(out_dir / "public-key.asc", gpg_export.stdout)
++
++    public_md = f"""# 发布者身份证明（公开材料）
++
++- 项目：Visual
++- 版本 Tag：`{tag}`
++- 提交 SHA：`{commit_sha}`
++- 提交作者：`{author_name} <{author_email}>`
++- 提交时间：`{commit_date}`
++- 生成时间（UTC）：`{generated_at}`
++
++## 第三方验证步骤
++
++1. 导入公钥（若提供）：
++   ```bash
++   gpg --import public-key.asc
++   ```
++2. 验证 Tag 签名：
++   ```bash
++   git verify-tag {tag}
++   git show {tag} --show-signature
++   ```
++3. 核对签名身份与指纹是否一致：
++   - 指纹见 `gpg-fingerprint.txt`
++   - 签名详情见 `tag-signature.txt`
++
++## 公开文件清单
++
++- `PUBLIC_RELEASE_PROOF.md`：面向外部的验证说明
++- `tag-signature.txt`：Tag 与签名详情输出
++- `tag-verify.txt`：`git verify-tag` 输出
++- `gpg-fingerprint.txt`：公钥指纹信息（若可导出）
++- `public-key.asc`：发布公钥（若可导出）
++"""
++    file_write(out_dir / "PUBLIC_RELEASE_PROOF.md", public_md)
++
++    print("Release proof exported:")
++    print(f"  {out_dir}")
++    print("Upload this folder to your public proof repo/release page.")
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+diff --git a/src/utils/model_selector.py b/src/utils/model_selector.py
+index ed28257..c7b8611 100755
+--- a/src/utils/model_selector.py
++++ b/src/utils/model_selector.py
+@@ -3,23 +3,35 @@ import tkinter as tk
+ from tkinter import ttk, filedialog, messagebox
+ import os
+ from pathlib import Path
+-from typing import Optional, Tuple
++from typing import Literal, Optional, Tuple
++
++
++SelectionAction = Literal["confirm", "use_default", "cancel", "error"]
++SelectionResult = Tuple[SelectionAction, Optional[str], Optional[str], Optional[bool]]
+ 
+ 
+ class ModelSelector:
+     """模型选择器 GUI"""
+     
+-    def __init__(self):
++    def __init__(
++        self,
++        initial_model_path: Optional[str] = None,
++        initial_detect_model_path: Optional[str] = None,
++    ):
+         """初始化模型选择器"""
+         self.selected_model_path = None
+         self.use_yolov13_repo = None
+-        self.result = None
++        self.result: SelectionResult = ("cancel", None, None, None)
+         self._root_closed = False
++        self.initial_model_path = str(Path(initial_model_path).resolve()) if initial_model_path else None
++        self.initial_detect_model_path = (
++            str(Path(initial_detect_model_path).resolve()) if initial_detect_model_path else None
++        )
+         
+         # 创建主窗口
+         self.root = tk.Tk()
+         self.root.title("选择 YOLO 模型")
+-        self.root.geometry("700x550")
++        self.root.geometry("760x620")
+         self.root.resizable(False, False)
+         self.root.protocol("WM_DELETE_WINDOW", self._cancel)
+         
+@@ -53,8 +65,8 @@ class ModelSelector:
+     def _center_window(self):
+         """将窗口居中显示"""
+         self.root.update_idletasks()
+-        width = 700
+-        height = 550
++        width = 760
++        height = 620
+         x = (self.root.winfo_screenwidth() // 2) - (width // 2)
+         y = (self.root.winfo_screenheight() // 2) - (height // 2)
+         self.root.geometry(f'{width}x{height}+{x}+{y}')
+@@ -112,21 +124,28 @@ class ModelSelector:
+         self.model_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+         
+-        # 扫描并填充模型列表
+-        self._scan_models()
+-        
+         # YOLOv13 仓库选项
+         repo_frame = tk.Frame(self.root)
+         repo_frame.pack(pady=10, padx=20, fill=tk.X)
+         
+-        self.repo_var = tk.BooleanVar(value=self._check_yolov13_repo())
+-        repo_check = tk.Checkbutton(
+-            repo_frame,
+-            text="使用 YOLOv13 本地仓库（如果可用）",
+-            variable=self.repo_var,
+-            font=("Microsoft YaHei", 9)
+-        )
+-        repo_check.pack(anchor="w")
++        repo_available = self._check_yolov13_repo()
++        self.repo_var = tk.BooleanVar(value=repo_available)
++        if repo_available:
++            repo_check = tk.Checkbutton(
++                repo_frame,
++                text="使用 YOLOv13 本地仓库（如果可用）",
++                variable=self.repo_var,
++                font=("Microsoft YaHei", 9)
++            )
++            repo_check.pack(anchor="w")
++        else:
++            repo_hint = tk.Label(
++                repo_frame,
++                text="未检测到 YOLOv13 本地仓库，已自动禁用该选项",
++                font=("Microsoft YaHei", 9),
++                fg="gray"
++            )
++            repo_hint.pack(anchor="w")
+         
+         # 按钮框架
+         button_frame = tk.Frame(self.root)
+@@ -193,21 +212,64 @@ class ModelSelector:
+         
+         # 绑定双击事件
+         self.model_list.bind("<Double-1>", lambda e: self._confirm())
++        self.model_list.bind("<<TreeviewSelect>>", self._on_model_select)
++
++        # 检测模型（手机）配置
++        detect_frame = tk.LabelFrame(self.root, text="手机检测模型（可单独设置）")
++        detect_frame.pack(pady=8, padx=20, fill=tk.X)
++
++        self.auto_detect_var = tk.BooleanVar(value=True)
++        auto_detect_cb = tk.Checkbutton(
++            detect_frame,
++            text="随姿态模型自动推导（*-pose.pt -> *.pt）",
++            variable=self.auto_detect_var,
++            command=self._on_auto_detect_toggle,
++            font=("Microsoft YaHei", 9),
++        )
++        auto_detect_cb.pack(anchor="w", padx=8, pady=(6, 4))
++
++        row_frame = tk.Frame(detect_frame)
++        row_frame.pack(fill=tk.X, padx=8, pady=(0, 8))
++
++        self.detect_model_var = tk.StringVar(value=self.initial_detect_model_path or "")
++        self.detect_model_entry = tk.Entry(
++            row_frame,
++            textvariable=self.detect_model_var,
++            font=("Microsoft YaHei", 9),
++        )
++        self.detect_model_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
++
++        detect_browse_btn = tk.Button(
++            row_frame,
++            text="浏览检测模型...",
++            command=self._browse_detect_file,
++            font=("Microsoft YaHei", 9),
++            width=14,
++        )
++        detect_browse_btn.pack(side=tk.LEFT, padx=6)
++        self._on_auto_detect_toggle()
++
++        # 扫描并填充模型列表（依赖 auto_detect_var / detect_model_var）
++        self._scan_models()
+     
+     def _scan_models(self):
+         """扫描可用的模型文件"""
+         models = []
++        seen_paths = set()
+         
+         # 扫描当前目录
+         current_dir = Path(".")
+         for pt_file in current_dir.glob("*.pt"):
+             if pt_file.is_file():
+-                size = pt_file.stat().st_size
+-                models.append({
+-                    "name": pt_file.name,
+-                    "path": str(pt_file.absolute()),
+-                    "size": self._format_size(size)
+-                })
++                abs_path = str(pt_file.absolute())
++                if abs_path not in seen_paths:
++                    seen_paths.add(abs_path)
++                    size = pt_file.stat().st_size
++                    models.append({
++                        "name": pt_file.name,
++                        "path": abs_path,
++                        "size": self._format_size(size)
++                    })
+         
+         # 扫描常见模型目录
+         common_dirs = ["models", "weights", "yolov13"]
+@@ -216,29 +278,38 @@ class ModelSelector:
+             if dir_path.exists() and dir_path.is_dir():
+                 for pt_file in dir_path.rglob("*.pt"):
+                     if pt_file.is_file():
+-                        size = pt_file.stat().st_size
+-                        models.append({
+-                            "name": pt_file.name,
+-                            "path": str(pt_file.absolute()),
+-                            "size": self._format_size(size)
+-                        })
++                        abs_path = str(pt_file.absolute())
++                        if abs_path not in seen_paths:
++                            seen_paths.add(abs_path)
++                            size = pt_file.stat().st_size
++                            models.append({
++                                "name": pt_file.name,
++                                "path": abs_path,
++                                "size": self._format_size(size)
++                            })
+         
+         # pose 模型优先展示，优先级: yolo26-pose > yolo11-pose > yolov8-pose > 其他
+         models.sort(key=lambda m: (self._model_priority(m["name"]), m["name"].lower()))
+ 
+         # 添加到列表
++        initial_item = None
+         for model in models:
+-            self.model_list.insert(
++            item = self.model_list.insert(
+                 "",
+                 tk.END,
+                 text=model["name"],
+                 values=(model["size"], model["path"])
+             )
++            if self.initial_model_path and model["path"] == self.initial_model_path:
++                initial_item = item
+ 
+-        # 默认选中首个模型（优先为 pose）
++        # 默认优先选中配置中的当前模型，避免误触覆盖配置。
+         items = self.model_list.get_children()
+-        if items:
+-            self.model_list.selection_set(items[0])
++        if initial_item:
++            self.model_list.selection_set(initial_item)
++            self.model_list.focus(initial_item)
++            self.model_list.see(initial_item)
++        elif items:
+             self.model_list.focus(items[0])
+         
+         # 如果没有找到模型，显示提示
+@@ -249,6 +320,18 @@ class ModelSelector:
+                 text="未找到模型文件，请点击'浏览其他文件...'",
+                 values=("", "")
+             )
++
++        # 初始同步检测模型路径
++        if hasattr(self, "auto_detect_var") and self.auto_detect_var.get():
++            if initial_item:
++                selected_model_path = self.model_list.item(initial_item, "values")[1]
++                inferred = self._infer_detect_model_path(selected_model_path)
++                if inferred and hasattr(self, "detect_model_var"):
++                    self.detect_model_var.set(inferred)
++            elif self.initial_model_path:
++                inferred = self._infer_detect_model_path(self.initial_model_path)
++                if inferred and hasattr(self, "detect_model_var"):
++                    self.detect_model_var.set(inferred)
+     
+     def _format_size(self, size_bytes: int) -> str:
+         """格式化文件大小"""
+@@ -293,6 +376,44 @@ class ModelSelector:
+         """统一决议是否启用本地 yolov13 仓库。"""
+         return self.repo_var.get() if self._is_yolov13_model(model_path) else False
+ 
++    @staticmethod
++    def _infer_detect_model_path(model_path: Optional[str]) -> Optional[str]:
++        """根据姿态模型路径推导手机检测模型路径。"""
++        if not model_path:
++            return None
++        p = Path(model_path)
++        name = p.name
++        if "-pose" in name:
++            return str((p.parent / name.replace("-pose", "")).resolve())
++        return str(p.resolve())
++
++    def _on_auto_detect_toggle(self):
++        """自动推导开关切换。"""
++        if self.auto_detect_var.get():
++            self.detect_model_entry.configure(state="readonly")
++            selected_items = self.model_list.selection()
++            if selected_items:
++                item = selected_items[0]
++                model_path = self.model_list.item(item, "values")[1]
++                inferred = self._infer_detect_model_path(model_path)
++                if inferred:
++                    self.detect_model_var.set(inferred)
++        else:
++            self.detect_model_entry.configure(state="normal")
++
++    def _on_model_select(self, _event=None):
++        """模型选择变化时自动刷新检测模型路径。"""
++        if not self.auto_detect_var.get():
++            return
++        selected_items = self.model_list.selection()
++        if not selected_items:
++            return
++        item = selected_items[0]
++        model_path = self.model_list.item(item, "values")[1]
++        inferred = self._infer_detect_model_path(model_path)
++        if inferred:
++            self.detect_model_var.set(inferred)
++
+     @staticmethod
+     def _model_priority(model_name: str) -> int:
+         name = model_name.lower()
+@@ -357,12 +478,28 @@ class ModelSelector:
+                 )
+                 self.model_list.selection_set(item)
+                 self.model_list.see(item)
++            self._on_model_select()
++
++    def _browse_detect_file(self):
++        """浏览选择手机检测模型文件"""
++        file_path = filedialog.askopenfilename(
++            title="选择手机检测模型文件",
++            filetypes=[
++                ("YOLO 模型文件", "*.pt"),
++                ("所有文件", "*.*")
++            ],
++            initialdir="."
++        )
++        if file_path:
++            self.auto_detect_var.set(False)
++            self.detect_model_entry.configure(state="normal")
++            self.detect_model_var.set(file_path)
+     
+     def _use_default(self):
+         """使用默认配置"""
+-        self.selected_model_path = None  # None 表示使用配置文件中的默认值
+-        self.use_yolov13_repo = self._resolve_repo_usage(None)
+-        self.result = (None, self.use_yolov13_repo)
++        self.selected_model_path = None
++        self.use_yolov13_repo = None
++        self.result = ("use_default", None, None, None)
+         self._close_root_once()
+     
+     def _confirm(self):
+@@ -383,7 +520,17 @@ class ModelSelector:
+         
+         self.selected_model_path = model_path
+         self.use_yolov13_repo = self._resolve_repo_usage(model_path)
+-        self.result = (model_path, self.use_yolov13_repo)
++        detect_model_path = self.detect_model_var.get().strip()
++        if not detect_model_path:
++            detect_model_path = self._infer_detect_model_path(model_path) or ""
++        if detect_model_path and not os.path.exists(detect_model_path):
++            confirm_continue = messagebox.askyesno(
++                "检测模型不存在",
++                f"手机检测模型文件不存在:\n{detect_model_path}\n\n是否继续并在运行时自动回退？"
++            )
++            if not confirm_continue:
++                return
++        self.result = ("confirm", model_path, detect_model_path or None, self.use_yolov13_repo)
+         self._close_root_once()
+     
+     def _add_official_model(self):
+@@ -651,29 +798,35 @@ class ModelSelector:
+     
+     def _cancel(self):
+         """取消选择"""
+-        self.result = None
++        self.result = ("cancel", None, None, None)
+         self._close_root_once()
+     
+-    def show(self) -> Optional[Tuple[str, bool]]:
++    def show(self) -> SelectionResult:
+         """
+         显示模型选择对话框
+         Returns:
+-            (model_path, use_yolov13_repo) 或 None（如果取消）
++            (action, model_path, use_yolov13_repo)
+         """
+         self.root.mainloop()
+         return self.result
+ 
+ 
+-def select_model() -> Optional[Tuple[str, bool]]:
++def select_model(
++    initial_model_path: Optional[str] = None,
++    initial_detect_model_path: Optional[str] = None,
++) -> SelectionResult:
+     """
+     显示模型选择对话框
+     Returns:
+-        (model_path, use_yolov13_repo) 或 None（如果取消）
++        (action, model_path, use_yolov13_repo)
+     """
+     try:
+-        selector = ModelSelector()
++        selector = ModelSelector(
++            initial_model_path=initial_model_path,
++            initial_detect_model_path=initial_detect_model_path,
++        )
+         return selector.show()
+     except Exception as e:
+         print(f"模型选择器错误: {e}")
+-        return None
++        return ("error", None, None, None)
+ 
+diff --git a/src/version.py b/src/version.py
+index 26d38b2..21667b3 100755
+--- a/src/version.py
++++ b/src/version.py
+@@ -1,5 +1,5 @@
+ """版本信息管理模块"""
+-__version__ = "3.6.0"
++__version__ = "3.7.0"
+ 
+ def get_version():
+     """获取当前版本号"""
