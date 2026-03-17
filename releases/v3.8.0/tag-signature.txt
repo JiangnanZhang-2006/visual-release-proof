@@ -1,0 +1,1619 @@
+tag v3.8.0
+Tagger: JiangnanZhang-2006 <zjn.2006@foxmail.com>
+Date:   Tue Mar 17 23:00:16 2026 +0800
+
+Release v3.8.0
+-----BEGIN PGP SIGNATURE-----
+
+iQJPBAABCAA5FiEEen89XXfEA5uGCvoQGGdwMHAF5NwFAmm5bIAbFIAAAAAABAAO
+bWFudTIsMi41KzEuMTIsMCwzAAoJEBhncDBwBeTcFaMP/22awPtGHPey6urKOcM7
+3esWFCxDlOskmqDQk83z3CfexU2ns3QwabI7A9/0zI3Olt0bchxzwEpdUuVSyGLj
+j8WXpbpez3+HfNhuBpsSPcpQBfJKykRp3euZKHPcULkrj3LIeLHmII4IQYSB9JxD
+xmfDIt1vMHydNZu/xrLAldFCT//dH9W18DyiFNKcB5twr6Oy4pbQkWddQiGq7/ms
+PCLRDxeR7BKzDs0rHq6PhJTBb8FuHqIIqFdOi6WcCq66n0EubES4YFS4iHdTz7LP
+1HOTYHJJlaXcGzv//T/96d3JLkomeWdFJx5izAWssbXm/mxOeehjzwpenvB/89vn
+tOOI39MKDQU7UBTM4IcbFw5w4vJOQahaJG97GYIoNaU0rBnP6CWMeuZN+JzGtcER
+KULvrxYLX8iyZFFCIiNEgNsfTAd9ok2XNeTICvB0IAbwsqBaSEVWRVFjrninTQrT
+WyPtJxqP/Va9aPHa0LPcnTHvFVm9mQPocjBJupkOOCk/CBUF+B11beNxliN8RcZZ
+4Tj+drwl+KNY1Y/L3jyz2WYtYWPBcDgPT0kJGlLZM4iNkfU5DCeV6Ihy7b70KUb/
+vDdwpSXvsBefaDlznJujV7TIJAA3pHpUbqHTEM/YYzFwsJrpZCMNEmJeHgNG9+2X
+NSuU1/S4AQE0tH7YxmJuTtNY
+=Nk4F
+-----END PGP SIGNATURE-----
+
+commit 662d9edb7245c4de5d849d4ed865fd2fad4ca423
+gpg: Signature made Tue Mar 17 23:00:16 2026 CST
+gpg:                using RSA key 7A7F3D5D77C4039B860AFA10186770307005E4DC
+gpg: Good signature from "Jiangnan Zhang (Visual Release Signing) <zjn.2006@foxmail.com>" [ultimate]
+Author: JiangnanZhang-2006 <zjn.2006@foxmail.com>
+Date:   Tue Mar 17 23:00:16 2026 +0800
+
+    release: v3.8.0 Add CPU acceleration profiles and benchmark tooling while packaging n-series and optimized model artifacts for distribution.
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 1370565..7c53a31 100755
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,22 @@
+ # 更新日志
+ 
++## [3.8.0] - 2026-03-17
++
++### 变更
++
++- ✨ **新增 CPU 加速档位与联合搜索能力（向后兼容）**
++  - 新增 `cpu_acceleration` 配置，支持 `fast/baseline` 档位快速切换（模型路径、推理尺寸、抽帧步长联动）
++  - 新增 `scripts/tools/cpu_accel_sweep.py`，支持模型尺寸 × 输入尺寸 × 抽帧步长联合评测并自动给出推荐
++  - 新增 `scripts/tools/switch_cpu_accel_mode.py` 与 `make cpu-fast/cpu-baseline`，支持一键切换与回滚
++
++### 修复
++
++- 🐛 **修复 ONNX Runtime CPU 路径可用性与双模型 ONNX 路径冲突**
++  - ONNX Runtime 后端加载流程支持 CPU 场景，并在 ONNX 导出后自动重试切换
++  - 检测专用模型改为独立 `onnx_path` 推导，避免与姿态模型 ONNX 文件冲突
++
++---
++
+ ## [3.7.0] - 2026-03-16
+ 
+ ### 变更
+diff --git a/Makefile b/Makefile
+index 8a8cc51..a836319 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,6 +1,6 @@
+ POETRY ?= poetry
+ 
+-.PHONY: install run api sync-deps export-proof
++.PHONY: install run api sync-deps export-proof pruning-benchmark cpu-accel-sweep cpu-fast cpu-baseline
+ 
+ install:
+ 	$(POETRY) install
+@@ -16,3 +16,15 @@ sync-deps:
+ 
+ export-proof:
+ 	python scripts/tools/export_release_proof.py
++
++pruning-benchmark:
++	venv/bin/python scripts/tools/pruning_benchmark.py --video "segmented_videos/VID_20251221_192629_roi_11s_13s.mp4" --max-frames 120 --frame-step 1 --warmup-frames 3 --methods "l1_unstructured,ln_structured" --ratios "0.1,0.2,0.3" --output "outputs/reports/pruning/pruning_benchmark_cpu.json"
++
++cpu-accel-sweep:
++	venv/bin/python scripts/tools/cpu_accel_sweep.py --video "segmented_videos/VID_20251221_192629_roi_11s_13s.mp4" --output "outputs/reports/pruning/stage3_cpu_accel_sweep.json"
++
++cpu-fast:
++	venv/bin/python scripts/tools/switch_cpu_accel_mode.py fast
++
++cpu-baseline:
++	venv/bin/python scripts/tools/switch_cpu_accel_mode.py baseline
+diff --git a/README.md b/README.md
+index a3fcf7d..3ed561a 100755
+--- a/README.md
++++ b/README.md
+@@ -2,6 +2,8 @@
+ 
+ 基于 YOLO（当前默认 YOLO26）和 MediaPipe 的实时监考作弊检测系统，支持多种作弊行为检测和 Web API 服务。
+ 
++当前版本：`v3.8.0`
++
+ ## ✨ 特性
+ 
+ - 🔍 **多维度检测**: 手机检测、头部转动、频繁转头、多人检测等
+@@ -155,6 +157,7 @@ poetry run uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+ - [多特征融合决策](docs/DECISION_FUSION.md) - 融合决策系统
+ - [FSM 多步骤检测](docs/FSM_DETECTION.md) - 有限状态机检测
+ - [性能优化指南](docs/OPTIMIZATION.md) - 性能优化方法
++- [YOLO 剪枝评测](docs/PRUNING_BENCHMARK.md) - CPU 场景剪枝加速与精度代理评测
+ - [日志系统指南](docs/LOGGING.md) - 日志配置和使用
+ 
+ ### 更多文档
+diff --git a/VERSION b/VERSION
+index 7c69a55..1981190 100755
+--- a/VERSION
++++ b/VERSION
+@@ -1 +1 @@
+-3.7.0
++3.8.0
+diff --git a/config/config.yaml b/config/config.yaml
+index fd85daa..7dd2c75 100755
+--- a/config/config.yaml
++++ b/config/config.yaml
+@@ -5,17 +5,12 @@ alert:
+   cooldown: 2.0
+   stabilizer:
+     enabled: true
+-    # 触发/释放双阈值（hysteresis）：触发阈值高于释放阈值，减少边缘抖动
+     trigger_score: 0.72
+     release_score: 0.45
+-    # 最短持续帧数：连续满足触发/释放条件的帧数要求
+     min_trigger_frames: 2
+     min_release_frames: 3
+-    # 释放后的抑制冷却时长（秒），避免短时间重复触发
+     cooldown_seconds: 1.2
+-    # 激活态下当前帧无新告警时，是否沿用上一次稳定告警文本
+     keep_last_alerts: true
+-    # 按检测类型覆盖参数（未配置的类型自动使用上述默认值）
+     per_type:
+       phone:
+         trigger_score: 0.78
+@@ -29,24 +24,24 @@ alert:
+         min_trigger_frames: 2
+         min_release_frames: 3
+       frequent_turn:
+-        trigger_score: 0.70
++        trigger_score: 0.7
+         release_score: 0.45
+         min_trigger_frames: 2
+         min_release_frames: 3
+       paper_passing:
+         trigger_score: 0.66
+-        release_score: 0.40
++        release_score: 0.4
+         min_trigger_frames: 1
+         min_release_frames: 4
+         cooldown_seconds: 2.0
+       multiple_people:
+         trigger_score: 0.74
+-        release_score: 0.50
++        release_score: 0.5
+         min_trigger_frames: 2
+         min_release_frames: 4
+       speaking:
+         trigger_score: 0.66
+-        release_score: 0.40
++        release_score: 0.4
+         min_trigger_frames: 2
+         min_release_frames: 3
+         cooldown_seconds: 1.2
+@@ -141,69 +136,6 @@ camera:
+   fps: 60
+   height: 480
+   width: 640
+-# camera:
+-#   device_id: 1
+-#   fps: 30
+-#   height: 480
+-#   width: 640
+-# cameras:
+-#   enabled: true
+-#   mode: multi
+-#   active_camera: 0
+-#   default_device_id: 0
+-#   default_width: 640
+-#   default_height: 480
+-#   default_fps: 30
+-#   list:
+-#   - id: 0
+-#     name: 前摄像头
+-#     device_id: 0
+-#     width: 640
+-#     height: 480
+-#     fps: 30
+-#     enabled: true
+-#     position: front
+-#     region: A区
+-  # - id: 1
+-  #   name: 后摄像头
+-  #   device_id: 1
+-  #   width: 640
+-  #   height: 480
+-  #   fps: 30
+-  #   enabled: true
+-  #   position: back
+-  #   region: A区
+-# cameras:
+-#   active_camera: 0
+-#   enabled: true
+-#   list:
+-#   - device_id: VID_20251221194200215.mp4
+-#     enabled: true
+-#     fps: 30
+-#     height: 480
+-#     id: 0
+-#     name: 前摄像头
+-#     position: front
+-#     region: A区
+-#     width: 640
+-  # - device_id: VID_20251221194212740.mp4
+-  #   enabled: true
+-  #   fps: 30
+-  #   height: 480
+-  #   id: 1
+-  #   name: 后摄像头
+-  #   position: back
+-  #   region: B区
+-  #   width: 640
+-  # - device_id: 0
+-  #   enabled: true
+-  #   fps: 30
+-  #   height: 480
+-  #   id: 2
+-  #   name: 摄像头2
+-  #   position: left
+-  #   region: ''
+-  #   width: 640
+   mode: multi
+ decision_fusion:
+   attention_dim: 64
+@@ -249,9 +181,9 @@ detection_thresholds:
+   head_turn: 0.3
+   keypoint_min_visibility: 0.35
+   looking_down: 0.15
+-  phone_confidence: 0.50
++  phone_confidence: 0.5
+   phone_persistence_seconds: 1.0
+-  phone_hold_conf_decay: 0.90
++  phone_hold_conf_decay: 0.9
+   phone_hold_inference_enabled: false
+   speaking_mouth_open_threshold: 0.18
+   speaking_min_consecutive_frames: 4
+@@ -264,17 +196,17 @@ detection_thresholds:
+   posture_release_ratio: 0.25
+   posture_forward_lean_threshold: 0.28
+   posture_backward_lean_threshold: 0.22
+-  posture_sideways_threshold: 0.20
++  posture_sideways_threshold: 0.2
+   posture_body_tilt_threshold: 0.18
+   posture_legs_spread_threshold: 1.45
+ display:
+-  # 多语言配置
+-  locale: zh_CN  # 语言代码：zh_CN（中文）或 en_US（英文）
+-  # 响应式布局配置
+-  responsive_layout: true  # 是否启用响应式布局
+-  base_resolution: [1920, 1080]  # 基准分辨率（用于计算缩放）
+-  min_font_size: 10  # 最小字体大小
+-  max_font_size: 50  # 最大字体大小
++  locale: zh_CN
++  responsive_layout: true
++  base_resolution:
++  - 1920
++  - 1080
++  min_font_size: 10
++  max_font_size: 50
+   alert_color:
+   - 0
+   - 0
+@@ -441,6 +373,7 @@ models:
+     enable_quantization: false
+     enable_tensorrt: false
+     gpu_memory_fraction: 0.8
++    inference_imgsz: 640
+     model_path: models/yolo26s-pose.pt
+     onnx_path: yolo26s.onnx
+     optimize_model: false
+@@ -449,6 +382,19 @@ models:
+     quantization_type: int8
+     tensorrt_path: null
+     use_half_precision: true
++cpu_acceleration:
++  mode: fast
++  profiles:
++    baseline:
++      pose_model_path: yolo26s-pose.pt
++      detect_model_path: yolo26s.pt
++      inference_imgsz: 640
++      frame_step: 1
++    fast:
++      pose_model_path: yolo26n-pose.pt
++      detect_model_path: yolo26n.pt
++      inference_imgsz: 512
++      frame_step: 2
+ multi_view_fusion:
+   enabled: true
+   fusion_mode: weighted
+diff --git a/docs/PRUNING_BENCHMARK.md b/docs/PRUNING_BENCHMARK.md
+new file mode 100644
+index 0000000..bfc7bcf
+--- /dev/null
++++ b/docs/PRUNING_BENCHMARK.md
+@@ -0,0 +1,97 @@
++# YOLO 剪枝加速评测（CPU）
++
++本文档用于复现“CPU 实时推理 + 精度预算 3%~5%”的剪枝评测流程。
++
++## 评测入口
++
++- 脚本：`scripts/tools/pruning_benchmark.py`
++- 快捷命令：`make pruning-benchmark`
++- 默认输出：`outputs/reports/pruning/pruning_benchmark_cpu.json`
++
++## 第三阶段（CPU 联合加速搜索）
++
++- 脚本：`scripts/tools/cpu_accel_sweep.py`
++- 快捷命令：`make cpu-accel-sweep`
++- 默认输出：`outputs/reports/pruning/stage3_cpu_accel_sweep.json`
++
++该阶段不再局限剪枝，联合搜索：
++
++- 模型尺寸（如 `yolo26n` / `yolo26s`）
++- 推理输入尺寸（`inference_imgsz`）
++- 抽帧步长（`frame_step`）
++
++### 默认启用与快速回滚
++
++`config/config.yaml` 新增 `cpu_acceleration`：
++
++- `mode: fast`：启用推荐加速配置
++- `mode: baseline`：快速回滚到原基线配置
++
++该开关会统一覆盖：
++
++- `models.yolo.model_path`
++- `models.yolo.detect_model_path`
++- `models.yolo.inference_imgsz`
++- 运行时检测抽帧步长（`frame_step`）
++
++## 指标定义
++
++### 性能指标
++
++- `avg_ms`：平均单帧耗时（ms）
++- `p95_ms`：95 分位单帧耗时（ms）
++- `effective_fps`：`1000 / avg_ms`
++- `speedup_ratio`：相对基线的加速比，`(baseline_avg - candidate_avg) / baseline_avg`
++
++### 精度代理指标（无人工标注）
++
++以“无剪枝基线”作为伪真值：
++
++- `recall_vs_baseline`：候选配置对基线正例召回
++- `false_positive_rate_vs_baseline`：候选配置相对基线负例误报率
++- `agreement`：帧级一致率
++
++关键特征默认关注：
++
++- `phone`
++- `head_turn`
++- `abnormal_posture`
++- `frequent_turn`
++
++## 门槛策略（当前默认）
++
++- 速度门槛：`speedup_ratio >= 0.20`（至少 20% 提速）
++- 精度门槛：关键特征最大下降 `<= 0.05`
++
++## 最近一次实测（2026-03-16）
++
++样本：`segmented_videos/VID_20251221_192629_roi_11s_13s.mp4`  
++设备：CPU（macOS）  
++帧设置：`max_frames=120, frame_step=1, warmup_frames=3`（实际有效帧 51）
++
++- 基线：`avg_ms=181.47`, `p95_ms=191.39`, `fps=5.51`
++- 候选（最佳速度）：
++  - `ln_structured@0.3`: `avg_ms=183.69`, `speedup=-1.22%`
++  - `ln_structured@0.1`: `avg_ms=187.08`, `speedup=-3.09%`
++  - `l1_unstructured@0.3`: `avg_ms=190.08`, `speedup=-4.74%`
++- 精度代理：关键特征下降均为 `0.0`
++- 推荐结果：**无配置通过 20% 提速门槛**
++
++结论：当前实现下，`torch.nn.utils.prune` 路径在 CPU 上未带来可观推理加速，甚至存在轻微回退。
++
++## 启用 / 回滚剪枝
++
++### 启用
++
++在 `config/config.yaml` 中设置：
++
++- `models.yolo.enable_pruning: true`
++- `models.yolo.pruning_method: l1_unstructured` 或 `ln_structured`
++- `models.yolo.pruning_ratio: 0.1 / 0.2 / 0.3`
++
++### 回滚
++
++- `models.yolo.enable_pruning: false`
++- 保持 `models.yolo.model_path` 与 `models.yolo.detect_model_path` 指向原始模型
++
++> 说明：剪枝模型会以 `*_pruned_XX.pt` 形式落盘，与原始模型并存，可快速切回。
+diff --git a/pyproject.toml b/pyproject.toml
+index 49a3a17..b24cc1f 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -1,6 +1,6 @@
+ [project]
+ name = "visual-cheating-detection"
+-version = "3.7.0"
++version = "3.8.0"
+ description = "Real-time proctoring and cheating detection system."
+ readme = "README.md"
+ authors = [{ name = "Visual Team" }]
+diff --git a/scripts/tools/cpu_accel_sweep.py b/scripts/tools/cpu_accel_sweep.py
+new file mode 100644
+index 0000000..140d35f
+--- /dev/null
++++ b/scripts/tools/cpu_accel_sweep.py
+@@ -0,0 +1,358 @@
++#!/usr/bin/env python3
++"""CPU 联合加速搜索：模型尺寸 × 输入尺寸 × 抽帧步长。"""
++
++from __future__ import annotations
++
++import argparse
++import json
++import statistics
++import time
++from dataclasses import dataclass
++from datetime import datetime, timezone
++from pathlib import Path
++from typing import Any, Dict, List, Optional, Tuple
++
++import cv2
++
++import sys
++
++PROJECT_ROOT = Path(__file__).resolve().parents[2]
++if str(PROJECT_ROOT) not in sys.path:
++    sys.path.insert(0, str(PROJECT_ROOT))
++
++from src.core.config_loader import ConfigLoader
++from src.core.detector import CheatingDetector
++
++
++DEFAULT_VIDEO = PROJECT_ROOT / "segmented_videos" / "VID_20251221_192629_roi_11s_13s.mp4"
++
++
++def _safe_div(a: float, b: float) -> float:
++    return a / b if b else 0.0
++
++
++def _percentile(values: List[float], pct: float) -> float:
++    if not values:
++        return 0.0
++    values = sorted(values)
++    idx = (len(values) - 1) * pct / 100.0
++    lo = int(idx)
++    hi = min(lo + 1, len(values) - 1)
++    frac = idx - lo
++    return values[lo] * (1 - frac) + values[hi] * frac
++
++
++def _feature_flags(result: Dict[str, Any]) -> Dict[str, bool]:
++    fmap = result.get("features", {}) or {}
++    out: Dict[str, bool] = {}
++    for k, v in fmap.items():
++        try:
++            out[str(k)] = float(v) > 0
++        except Exception:
++            out[str(k)] = bool(v)
++    return out
++
++
++@dataclass
++class FrameRecord:
++    frame_index: int
++    cheating: bool
++    has_alert: bool
++    feature_flags: Dict[str, bool]
++    wall_ms: float
++
++
++def _build_detector(
++    *,
++    config_path: str,
++    pose_model_path: str,
++    detect_model_path: str,
++    inference_imgsz: int,
++) -> CheatingDetector:
++    cfg = ConfigLoader(config_path)
++    cfg.set("models.yolo.model_path", pose_model_path)
++    cfg.set("models.yolo.detect_model_path", detect_model_path)
++    cfg.set("models.yolo.inference_imgsz", inference_imgsz)
++    cfg.set("models.yolo.enable_pruning", False)
++    cfg.set("models.yolo.enable_onnx_runtime", False)
++    cfg.set("models.yolo.optimize_model", False)
++    cfg.set("models.yolo.device", "cpu")
++    cfg.set("models.yolo.use_half_precision", False)
++    cfg.set("models.yolo.enable_tensorrt", False)
++    return CheatingDetector(cfg)
++
++
++def _run_eval(
++    *,
++    detector: CheatingDetector,
++    video_path: str,
++    frame_step: int,
++    max_frames: int,
++    warmup_frames: int,
++) -> Dict[str, Any]:
++    cap = cv2.VideoCapture(video_path)
++    if not cap.isOpened():
++        raise RuntimeError(f"无法打开视频: {video_path}")
++
++    records: List[FrameRecord] = []
++    frame_idx = -1
++    sampled = 0
++    seen = 0
++    try:
++        while sampled < max_frames:
++            ok, frame = cap.read()
++            if not ok or frame is None:
++                break
++            frame_idx += 1
++            if frame_step > 1 and frame_idx % frame_step != 0:
++                continue
++
++            seen += 1
++            t0 = time.perf_counter()
++            result = detector.analyze_frame(frame)
++            wall_ms = (time.perf_counter() - t0) * 1000.0
++            if seen <= warmup_frames:
++                continue
++
++            records.append(
++                FrameRecord(
++                    frame_index=frame_idx,
++                    cheating=bool(result.get("cheating_detected", False)),
++                    has_alert=bool(result.get("alerts")),
++                    feature_flags=_feature_flags(result),
++                    wall_ms=wall_ms,
++                )
++            )
++            sampled += 1
++    finally:
++        cap.release()
++
++    if not records:
++        raise RuntimeError("没有采到有效评测帧。")
++
++    wall = [r.wall_ms for r in records]
++    avg_ms = statistics.mean(wall)
++    return {
++        "frames_evaluated": len(records),
++        "avg_ms": avg_ms,
++        "p95_ms": _percentile(wall, 95),
++        "effective_fps_processed": _safe_div(1000.0, avg_ms),
++        "frame_records": [
++            {
++                "frame_index": r.frame_index,
++                "cheating": r.cheating,
++                "has_alert": r.has_alert,
++                "feature_flags": r.feature_flags,
++            }
++            for r in records
++        ],
++    }
++
++
++def _binary_metrics(pairs: List[Tuple[bool, bool]]) -> Dict[str, float]:
++    tp = sum(1 for b, c in pairs if b and c)
++    fn = sum(1 for b, c in pairs if b and (not c))
++    fp = sum(1 for b, c in pairs if (not b) and c)
++    tn = sum(1 for b, c in pairs if (not b) and (not c))
++    return {
++        "baseline_positive": tp + fn,
++        "candidate_positive": tp + fp,
++        "recall_vs_baseline": _safe_div(tp, tp + fn),
++        "false_positive_rate_vs_baseline": _safe_div(fp, fp + tn),
++        "agreement": _safe_div(tp + tn, tp + tn + fp + fn),
++    }
++
++
++def _proxy_compare(base: List[Dict[str, Any]], cand: List[Dict[str, Any]]) -> Dict[str, Any]:
++    bmap = {int(x["frame_index"]): x for x in base}
++    cmap = {int(x["frame_index"]): x for x in cand}
++    keys = sorted(set(bmap).intersection(cmap))
++    if not keys:
++        return {"frames_compared": 0}
++
++    bseq = [bmap[k] for k in keys]
++    cseq = [cmap[k] for k in keys]
++    feature_types = set()
++    for x in bseq:
++        feature_types.update((x.get("feature_flags") or {}).keys())
++    for x in cseq:
++        feature_types.update((x.get("feature_flags") or {}).keys())
++
++    out = {
++        "frames_compared": len(keys),
++        "cheating": _binary_metrics([(bool(b["cheating"]), bool(c["cheating"])) for b, c in zip(bseq, cseq)]),
++        "alert": _binary_metrics([(bool(b["has_alert"]), bool(c["has_alert"])) for b, c in zip(bseq, cseq)]),
++        "feature_types": {},
++    }
++    for ft in sorted(feature_types):
++        pairs = []
++        for b, c in zip(bseq, cseq):
++            pairs.append(
++                (
++                    bool((b.get("feature_flags") or {}).get(ft, False)),
++                    bool((c.get("feature_flags") or {}).get(ft, False)),
++                )
++            )
++        out["feature_types"][ft] = _binary_metrics(pairs)
++    return out
++
++
++def _parse_model_pairs(arg: str) -> List[Tuple[str, str]]:
++    out = []
++    for item in [x.strip() for x in arg.split(",") if x.strip()]:
++        if ":" not in item:
++            raise ValueError(f"模型对格式错误: {item}，应为 pose.pt:detect.pt")
++        pose, detect = item.split(":", 1)
++        out.append((pose.strip(), detect.strip()))
++    return out
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser(description="CPU acceleration sweep.")
++    parser.add_argument("--config", default="config/config.yaml")
++    parser.add_argument("--video", default=str(DEFAULT_VIDEO))
++    parser.add_argument(
++        "--model-pairs",
++        default="yolo26n-pose.pt:yolo26n.pt,yolo26s-pose.pt:yolo26s.pt",
++        help="模型对列表 pose:detect,pose:detect",
++    )
++    parser.add_argument("--imgsz-list", default="512,640")
++    parser.add_argument("--frame-steps", default="1,2")
++    parser.add_argument("--max-frames", type=int, default=80)
++    parser.add_argument("--warmup-frames", type=int, default=3)
++    parser.add_argument("--min-speedup", type=float, default=0.20)
++    parser.add_argument("--max-drop", type=float, default=0.05)
++    parser.add_argument("--key-features", default="phone,head_turn,abnormal_posture,frequent_turn")
++    parser.add_argument("--output", default="outputs/reports/pruning/stage3_cpu_accel_sweep.json")
++    args = parser.parse_args()
++
++    model_pairs = _parse_model_pairs(args.model_pairs)
++    imgsz_list = [int(x.strip()) for x in args.imgsz_list.split(",") if x.strip()]
++    frame_steps = [int(x.strip()) for x in args.frame_steps.split(",") if x.strip()]
++    key_features = [x.strip() for x in args.key_features.split(",") if x.strip()]
++
++    baseline_pose, baseline_detect = model_pairs[0]
++    baseline_imgsz = imgsz_list[-1]
++    baseline_step = 1
++
++    base_detector = _build_detector(
++        config_path=args.config,
++        pose_model_path=baseline_pose,
++        detect_model_path=baseline_detect,
++        inference_imgsz=baseline_imgsz,
++    )
++    try:
++        baseline = _run_eval(
++            detector=base_detector,
++            video_path=args.video,
++            frame_step=baseline_step,
++            max_frames=args.max_frames,
++            warmup_frames=args.warmup_frames,
++        )
++    finally:
++        base_detector.cleanup()
++
++    base_norm_cost = baseline["avg_ms"] / baseline_step
++    candidates: List[Dict[str, Any]] = []
++    for pose, detect in model_pairs:
++        for imgsz in imgsz_list:
++            for step in frame_steps:
++                if pose == baseline_pose and detect == baseline_detect and imgsz == baseline_imgsz and step == baseline_step:
++                    continue
++                detector = _build_detector(
++                    config_path=args.config,
++                    pose_model_path=pose,
++                    detect_model_path=detect,
++                    inference_imgsz=imgsz,
++                )
++                try:
++                    ev = _run_eval(
++                        detector=detector,
++                        video_path=args.video,
++                        frame_step=step,
++                        max_frames=args.max_frames,
++                        warmup_frames=args.warmup_frames,
++                    )
++                finally:
++                    detector.cleanup()
++
++                proxy = _proxy_compare(baseline["frame_records"], ev["frame_records"])
++                norm_cost = ev["avg_ms"] / step
++                speedup = _safe_div(base_norm_cost - norm_cost, base_norm_cost)
++                drops = {}
++                for ft in key_features:
++                    m = (proxy.get("feature_types") or {}).get(ft, {})
++                    if int(m.get("baseline_positive", 0)) > 0:
++                        drops[ft] = 1.0 - float(m.get("recall_vs_baseline", 1.0))
++                max_drop = max(drops.values()) if drops else 0.0
++                decision = {
++                    "normalized_cost_ms": norm_cost,
++                    "speedup_ratio": speedup,
++                    "feature_drop_detail": drops,
++                    "max_observed_drop": max_drop,
++                    "pass_speed": speedup >= args.min_speedup,
++                    "pass_accuracy_budget": max_drop <= args.max_drop,
++                }
++                decision["is_recommended"] = decision["pass_speed"] and decision["pass_accuracy_budget"]
++                candidates.append(
++                    {
++                        "pose_model_path": pose,
++                        "detect_model_path": detect,
++                        "inference_imgsz": imgsz,
++                        "frame_step": step,
++                        **{k: v for k, v in ev.items() if k != "frame_records"},
++                        "proxy_vs_baseline": proxy,
++                        "decision": decision,
++                    }
++                )
++
++    rec = sorted(
++        [c for c in candidates if c["decision"]["is_recommended"]],
++        key=lambda x: (-x["decision"]["speedup_ratio"], x["decision"]["max_observed_drop"]),
++    )
++
++    report = {
++        "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
++        "scope": {
++            "video": str(Path(args.video).resolve()),
++            "model_pairs": model_pairs,
++            "imgsz_list": imgsz_list,
++            "frame_steps": frame_steps,
++            "max_frames": args.max_frames,
++            "warmup_frames": args.warmup_frames,
++            "min_speedup": args.min_speedup,
++            "max_drop": args.max_drop,
++            "key_features": key_features,
++        },
++        "baseline": {
++            "pose_model_path": baseline_pose,
++            "detect_model_path": baseline_detect,
++            "inference_imgsz": baseline_imgsz,
++            "frame_step": baseline_step,
++            "normalized_cost_ms": base_norm_cost,
++            **{k: v for k, v in baseline.items() if k != "frame_records"},
++        },
++        "candidates": candidates,
++        "recommendations": [
++            {
++                "pose_model_path": x["pose_model_path"],
++                "detect_model_path": x["detect_model_path"],
++                "inference_imgsz": x["inference_imgsz"],
++                "frame_step": x["frame_step"],
++                "speedup_ratio": x["decision"]["speedup_ratio"],
++                "max_observed_drop": x["decision"]["max_observed_drop"],
++            }
++            for x in rec[:2]
++        ],
++    }
++
++    out = Path(args.output)
++    out.parent.mkdir(parents=True, exist_ok=True)
++    out.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
++    print(f"[OK] baseline normalized_cost_ms={base_norm_cost:.2f}")
++    print(f"[OK] candidates tested={len(candidates)}, recommended={len(report['recommendations'])}")
++    print(f"[OK] report saved: {out.resolve()}")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/scripts/tools/pruning_benchmark.py b/scripts/tools/pruning_benchmark.py
+new file mode 100644
+index 0000000..dd4d39a
+--- /dev/null
++++ b/scripts/tools/pruning_benchmark.py
+@@ -0,0 +1,455 @@
++#!/usr/bin/env python3
++"""YOLO 剪枝加速评测脚本（CPU 优先）。
++
++输出：
++- baseline + candidate 的性能指标
++- 相对基线的速度提升
++- 以基线为伪真值的精度代理指标（召回/误报/一致率）
++- 推荐配置（满足速度与精度预算）
++"""
++
++from __future__ import annotations
++
++import argparse
++import json
++import os
++import sys
++import statistics
++import time
++from dataclasses import dataclass
++from datetime import datetime, timezone
++from pathlib import Path
++from typing import Any, Dict, Iterable, List, Optional, Tuple
++
++import cv2
++
++PROJECT_ROOT = Path(__file__).resolve().parents[2]
++if str(PROJECT_ROOT) not in sys.path:
++    sys.path.insert(0, str(PROJECT_ROOT))
++
++from src.core.config_loader import ConfigLoader
++from src.core.detector import CheatingDetector
++
++
++DEFAULT_VIDEO = PROJECT_ROOT / "segmented_videos" / "VID_20251221_192629_roi_11s_13s.mp4"
++
++
++def _percentile(values: List[float], pct: float) -> float:
++    if not values:
++        return 0.0
++    if len(values) == 1:
++        return values[0]
++    idx = (len(values) - 1) * pct / 100.0
++    lo = int(idx)
++    hi = min(lo + 1, len(values) - 1)
++    frac = idx - lo
++    return values[lo] * (1.0 - frac) + values[hi] * frac
++
++
++def _safe_div(num: float, den: float) -> float:
++    return num / den if den else 0.0
++
++
++def _extract_feature_flags(result: Dict[str, Any]) -> Dict[str, bool]:
++    feature_map = result.get("features", {}) or {}
++    flags: Dict[str, bool] = {}
++    for feature_type, confidence in feature_map.items():
++        try:
++            flags[str(feature_type)] = float(confidence) > 0.0
++        except Exception:
++            flags[str(feature_type)] = bool(confidence)
++    return flags
++
++
++@dataclass
++class FrameRecord:
++    cheating: bool
++    has_alert: bool
++    feature_flags: Dict[str, bool]
++    wall_ms: float
++
++
++def _disable_ultralytics_sync() -> None:
++    # 避免 ultralytics 在退出阶段开网络线程触发 GIL 异常。
++    os.environ.setdefault("YOLO_VERBOSE", "False")
++    os.environ.setdefault("ULTRALYTICS_HUB", "False")
++    try:
++        from ultralytics import settings as ul_settings  # type: ignore
++
++        ul_settings.update({"sync": False})
++    except Exception:
++        pass
++
++
++def _expected_pruned_path(model_path: str, ratio: float) -> Path:
++    p = Path(model_path)
++    suffix = p.suffix
++    stem = p.stem
++    return p.with_name(f"{stem}_pruned_{int(ratio * 100)}{suffix}")
++
++
++def _build_detector(
++    *,
++    config_path: str,
++    model_path: str,
++    detect_model_path: str,
++    pruning_enabled: bool,
++    pruning_method: str,
++    pruning_ratio: float,
++    force_cpu: bool,
++    backend: str,
++) -> CheatingDetector:
++    cfg = ConfigLoader(config_path)
++    cfg.set("models.yolo.model_path", model_path)
++    cfg.set("models.yolo.detect_model_path", detect_model_path)
++    cfg.set("models.yolo.enable_pruning", pruning_enabled)
++    cfg.set("models.yolo.pruning_method", pruning_method)
++    cfg.set("models.yolo.pruning_ratio", pruning_ratio)
++    backend_mode = backend.strip().lower()
++    if backend_mode == "onnxruntime":
++        cfg.set("models.yolo.enable_onnx_runtime", True)
++        cfg.set("models.yolo.optimize_model", True)
++    else:
++        cfg.set("models.yolo.enable_onnx_runtime", False)
++    if force_cpu:
++        cfg.set("models.yolo.device", "cpu")
++        cfg.set("models.yolo.use_half_precision", False)
++        cfg.set("models.yolo.enable_tensorrt", False)
++        cfg.set("models.yolo.enable_onnx_runtime", False)
++    return CheatingDetector(cfg)
++
++
++def _run_single_eval(
++    *,
++    detector: CheatingDetector,
++    video_path: str,
++    max_frames: int,
++    frame_step: int,
++    warmup_frames: int,
++) -> Dict[str, Any]:
++    cap = cv2.VideoCapture(video_path)
++    if not cap.isOpened():
++        raise RuntimeError(f"无法打开视频: {video_path}")
++
++    records: List[FrameRecord] = []
++    sampled = 0
++    observed = 0
++    frame_index = -1
++
++    try:
++        while sampled < max_frames:
++            ok, frame = cap.read()
++            if not ok or frame is None:
++                break
++
++            frame_index += 1
++            if frame_step > 1 and frame_index % frame_step != 0:
++                continue
++
++            observed += 1
++            start = time.perf_counter()
++            result = detector.analyze_frame(frame)
++            wall_ms = (time.perf_counter() - start) * 1000.0
++
++            if observed <= warmup_frames:
++                continue
++
++            records.append(
++                FrameRecord(
++                    cheating=bool(result.get("cheating_detected", False)),
++                    has_alert=bool(result.get("alerts")),
++                    feature_flags=_extract_feature_flags(result),
++                    wall_ms=wall_ms,
++                )
++            )
++            sampled += 1
++    finally:
++        cap.release()
++
++    if not records:
++        raise RuntimeError("评测未采集到有效帧，请检查视频或参数。")
++
++    wall = sorted([r.wall_ms for r in records])
++    avg_ms = statistics.mean(wall)
++    fps = _safe_div(1000.0, avg_ms)
++    feature_counts: Dict[str, int] = {}
++    for rec in records:
++        for k, v in rec.feature_flags.items():
++            if v:
++                feature_counts[k] = feature_counts.get(k, 0) + 1
++
++    return {
++        "frames_evaluated": len(records),
++        "avg_ms": avg_ms,
++        "p50_ms": _percentile(wall, 50),
++        "p95_ms": _percentile(wall, 95),
++        "effective_fps": fps,
++        "cheating_rate": _safe_div(sum(1 for r in records if r.cheating), len(records)),
++        "alert_rate": _safe_div(sum(1 for r in records if r.has_alert), len(records)),
++        "feature_positive_counts": feature_counts,
++        "frame_records": [
++            {
++                "cheating": r.cheating,
++                "has_alert": r.has_alert,
++                "feature_flags": r.feature_flags,
++            }
++            for r in records
++        ],
++    }
++
++
++def _compare_proxy(
++    baseline_records: List[Dict[str, Any]],
++    candidate_records: List[Dict[str, Any]],
++) -> Dict[str, Any]:
++    n = min(len(baseline_records), len(candidate_records))
++    if n == 0:
++        return {}
++
++    base = baseline_records[:n]
++    cand = candidate_records[:n]
++
++    def _binary_metrics(bvals: List[bool], cvals: List[bool]) -> Dict[str, float]:
++        tp = sum(1 for b, c in zip(bvals, cvals) if b and c)
++        fn = sum(1 for b, c in zip(bvals, cvals) if b and (not c))
++        fp = sum(1 for b, c in zip(bvals, cvals) if (not b) and c)
++        tn = sum(1 for b, c in zip(bvals, cvals) if (not b) and (not c))
++        return {
++            "baseline_positive": tp + fn,
++            "candidate_positive": tp + fp,
++            "recall_vs_baseline": _safe_div(tp, tp + fn),
++            "false_positive_rate_vs_baseline": _safe_div(fp, fp + tn),
++            "agreement": _safe_div(tp + tn, tp + tn + fp + fn),
++        }
++
++    cheating_metrics = _binary_metrics(
++        [bool(r["cheating"]) for r in base],
++        [bool(r["cheating"]) for r in cand],
++    )
++    alert_metrics = _binary_metrics(
++        [bool(r["has_alert"]) for r in base],
++        [bool(r["has_alert"]) for r in cand],
++    )
++
++    all_types = set()
++    for r in base:
++        all_types.update((r.get("feature_flags") or {}).keys())
++    for r in cand:
++        all_types.update((r.get("feature_flags") or {}).keys())
++
++    feature_metrics: Dict[str, Dict[str, float]] = {}
++    for feature_type in sorted(all_types):
++        bvals = [bool((r.get("feature_flags") or {}).get(feature_type, False)) for r in base]
++        cvals = [bool((r.get("feature_flags") or {}).get(feature_type, False)) for r in cand]
++        feature_metrics[feature_type] = _binary_metrics(bvals, cvals)
++
++    return {
++        "frames_compared": n,
++        "cheating": cheating_metrics,
++        "alert": alert_metrics,
++        "feature_types": feature_metrics,
++    }
++
++
++def _evaluate_candidate(
++    *,
++    baseline: Dict[str, Any],
++    candidate: Dict[str, Any],
++    key_features: Iterable[str],
++    min_speedup: float,
++    max_drop: float,
++) -> Dict[str, Any]:
++    speedup = _safe_div(
++        baseline["avg_ms"] - candidate["avg_ms"],
++        baseline["avg_ms"],
++    )
++    proxy = candidate["proxy_vs_baseline"]
++    feature_metrics = proxy.get("feature_types", {})
++
++    drops = {}
++    for ft in key_features:
++        rec = float(feature_metrics.get(ft, {}).get("recall_vs_baseline", 1.0))
++        if int(feature_metrics.get(ft, {}).get("baseline_positive", 0)) > 0:
++            drops[ft] = 1.0 - rec
++
++    max_observed_drop = max(drops.values()) if drops else 0.0
++    pass_speed = speedup >= min_speedup
++    pass_accuracy = max_observed_drop <= max_drop
++
++    return {
++        "speedup_ratio": speedup,
++        "max_observed_drop": max_observed_drop,
++        "feature_drop_detail": drops,
++        "pass_speed": pass_speed,
++        "pass_accuracy_budget": pass_accuracy,
++        "is_recommended": pass_speed and pass_accuracy,
++    }
++
++
++def _ensure_parent(path: Path) -> None:
++    path.parent.mkdir(parents=True, exist_ok=True)
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser(description="YOLO pruning benchmark for CPU inference.")
++    parser.add_argument("--video", default=str(DEFAULT_VIDEO), help="评测视频路径")
++    parser.add_argument("--config", default="config/config.yaml", help="配置文件路径")
++    parser.add_argument("--max-frames", type=int, default=120, help="每组最多评测帧数")
++    parser.add_argument("--frame-step", type=int, default=3, help="抽帧步长")
++    parser.add_argument("--warmup-frames", type=int, default=10, help="预热帧数（不计入统计）")
++    parser.add_argument("--methods", default="l1_unstructured,ln_structured", help="剪枝方法列表（逗号分隔）")
++    parser.add_argument("--ratios", default="0.1,0.2,0.3", help="剪枝比例列表（逗号分隔）")
++    parser.add_argument("--min-speedup", type=float, default=0.20, help="推荐最低提速比例")
++    parser.add_argument("--max-drop", type=float, default=0.05, help="精度代理允许最大下降")
++    parser.add_argument(
++        "--backend",
++        default="pytorch",
++        choices=["pytorch", "onnxruntime"],
++        help="推理后端（pytorch / onnxruntime）",
++    )
++    parser.add_argument(
++        "--key-features",
++        default="phone,head_turn,abnormal_posture,frequent_turn",
++        help="关键特征类型（逗号分隔）",
++    )
++    parser.add_argument(
++        "--output",
++        default="outputs/reports/pruning/pruning_benchmark_cpu.json",
++        help="JSON 报告输出路径",
++    )
++    args = parser.parse_args()
++
++    _disable_ultralytics_sync()
++
++    cfg = ConfigLoader(args.config)
++    model_path = cfg.get("models.yolo.model_path")
++    detect_model_path = cfg.get("models.yolo.detect_model_path") or model_path
++    methods = [m.strip() for m in args.methods.split(",") if m.strip()]
++    ratios = [float(x.strip()) for x in args.ratios.split(",") if x.strip()]
++    key_features = [x.strip() for x in args.key_features.split(",") if x.strip()]
++
++    if not Path(args.video).exists():
++        raise FileNotFoundError(f"评测视频不存在: {args.video}")
++
++    # 1) baseline
++    baseline_detector = _build_detector(
++        config_path=args.config,
++        model_path=model_path,
++        detect_model_path=detect_model_path,
++        pruning_enabled=False,
++        pruning_method="l1_unstructured",
++        pruning_ratio=0.0,
++        force_cpu=True,
++        backend=args.backend,
++    )
++    try:
++        baseline_eval = _run_single_eval(
++            detector=baseline_detector,
++            video_path=args.video,
++            max_frames=args.max_frames,
++            frame_step=args.frame_step,
++            warmup_frames=args.warmup_frames,
++        )
++    finally:
++        baseline_detector.cleanup()
++
++    # 2) matrix
++    candidates: List[Dict[str, Any]] = []
++    for method in methods:
++        for ratio in ratios:
++            # 方法切换时，删除可能复用的旧剪枝模型，避免因文件名仅含 ratio 导致串用。
++            for p in (_expected_pruned_path(model_path, ratio), _expected_pruned_path(detect_model_path, ratio)):
++                if p.exists():
++                    try:
++                        p.unlink()
++                    except Exception:
++                        pass
++
++            detector = _build_detector(
++                config_path=args.config,
++                model_path=model_path,
++                detect_model_path=detect_model_path,
++                pruning_enabled=True,
++                pruning_method=method,
++                pruning_ratio=ratio,
++                force_cpu=True,
++                backend=args.backend,
++            )
++            try:
++                eval_res = _run_single_eval(
++                    detector=detector,
++                    video_path=args.video,
++                    max_frames=args.max_frames,
++                    frame_step=args.frame_step,
++                    warmup_frames=args.warmup_frames,
++                )
++            finally:
++                detector.cleanup()
++
++            proxy = _compare_proxy(baseline_eval["frame_records"], eval_res["frame_records"])
++            candidate = {
++                "pruning_method": method,
++                "pruning_ratio": ratio,
++                **{k: v for k, v in eval_res.items() if k != "frame_records"},
++                "proxy_vs_baseline": proxy,
++            }
++            candidate["decision"] = _evaluate_candidate(
++                baseline={k: v for k, v in baseline_eval.items() if k != "frame_records"},
++                candidate=candidate,
++                key_features=key_features,
++                min_speedup=args.min_speedup,
++                max_drop=args.max_drop,
++            )
++            candidates.append(candidate)
++
++    # 3) ranking / recommendation
++    recommended = [c for c in candidates if c["decision"]["is_recommended"]]
++    recommended_sorted = sorted(
++        recommended,
++        key=lambda x: (
++            -float(x["decision"]["speedup_ratio"]),
++            float(x["decision"]["max_observed_drop"]),
++        ),
++    )
++
++    report = {
++        "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
++        "scope": {
++            "video": str(Path(args.video).resolve()),
++            "config": str(Path(args.config).resolve()),
++            "device": "cpu",
++            "max_frames": args.max_frames,
++            "frame_step": args.frame_step,
++            "warmup_frames": args.warmup_frames,
++            "methods": methods,
++            "ratios": ratios,
++            "key_features": key_features,
++            "speedup_threshold": args.min_speedup,
++            "max_drop_budget": args.max_drop,
++            "backend": args.backend,
++        },
++        "baseline": {k: v for k, v in baseline_eval.items() if k != "frame_records"},
++        "candidates": candidates,
++        "recommendations": [
++            {
++                "pruning_method": c["pruning_method"],
++                "pruning_ratio": c["pruning_ratio"],
++                "speedup_ratio": c["decision"]["speedup_ratio"],
++                "max_observed_drop": c["decision"]["max_observed_drop"],
++                "feature_drop_detail": c["decision"]["feature_drop_detail"],
++            }
++            for c in recommended_sorted[:2]
++        ],
++    }
++
++    out_path = Path(args.output)
++    _ensure_parent(out_path)
++    out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
++
++    print(f"[OK] baseline avg_ms={report['baseline']['avg_ms']:.2f}, fps={report['baseline']['effective_fps']:.2f}")
++    print(f"[OK] candidates tested={len(candidates)}, recommended={len(report['recommendations'])}")
++    print(f"[OK] report saved: {out_path.resolve()}")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/scripts/tools/switch_cpu_accel_mode.py b/scripts/tools/switch_cpu_accel_mode.py
+new file mode 100644
+index 0000000..da16586
+--- /dev/null
++++ b/scripts/tools/switch_cpu_accel_mode.py
+@@ -0,0 +1,40 @@
++#!/usr/bin/env python3
++"""切换 CPU 加速模式（fast / baseline）。"""
++
++from __future__ import annotations
++
++import argparse
++from pathlib import Path
++
++import yaml
++
++
++def main() -> int:
++    parser = argparse.ArgumentParser(description="Switch cpu_acceleration.mode in config yaml.")
++    parser.add_argument("mode", choices=["fast", "baseline"], help="Target CPU acceleration mode")
++    parser.add_argument("--config", default="config/config.yaml", help="Path to config yaml")
++    args = parser.parse_args()
++
++    config_path = Path(args.config)
++    if not config_path.exists():
++        print(f"[ERR] 配置文件不存在: {config_path}")
++        return 1
++
++    data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
++    cpu_cfg = data.get("cpu_acceleration")
++    if not isinstance(cpu_cfg, dict):
++        data["cpu_acceleration"] = {"mode": args.mode}
++    else:
++        cpu_cfg["mode"] = args.mode
++
++    config_path.write_text(
++        yaml.safe_dump(data, allow_unicode=True, sort_keys=False),
++        encoding="utf-8",
++    )
++    print(f"[OK] cpu_acceleration.mode -> {args.mode}")
++    print(f"[OK] config updated: {config_path}")
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+diff --git a/src/core/application.py b/src/core/application.py
+index 0daf62a..8e75a9a 100755
+--- a/src/core/application.py
++++ b/src/core/application.py
+@@ -107,6 +107,8 @@ class Application:
+         self.performance_config = config.get_section('performance')
+         self.video_config = config.get_section('video_analysis', {})
+         self.threading_config = config.get_section('threading', {})
++        self.runtime_frame_step = self._resolve_runtime_frame_step()
++        self._runtime_frame_counter = 0
+         self.sync_display_with_detection = bool(
+             self.threading_config.get('sync_display_with_detection', True)
+         )
+@@ -154,6 +156,20 @@ class Application:
+             'open_capture_timestamp': None,
+         }
+ 
++    def _resolve_runtime_frame_step(self) -> int:
++        """解析运行时检测抽帧步长，支持快速回滚配置。"""
++        cpu_accel_cfg = self.config.get_section('cpu_acceleration', {})
++        mode = str(cpu_accel_cfg.get('mode', 'off')).strip().lower() if isinstance(cpu_accel_cfg, dict) else 'off'
++        profiles = cpu_accel_cfg.get('profiles', {}) if isinstance(cpu_accel_cfg, dict) else {}
++        if isinstance(profiles, dict):
++            profile = profiles.get(mode, {})
++            if isinstance(profile, dict):
++                try:
++                    return max(1, int(profile.get('frame_step', 1)))
++                except Exception:
++                    return 1
++        return 1
++
+     def _resolve_runtime_fps(self) -> float:
+         """推断当前运行模式的帧率。"""
+         if self.mode == 'video' and self.video_manager:
+@@ -895,6 +911,8 @@ class Application:
+             self.alert_config = self.config.get_section('alert')
+             self.performance_config = self.config.get_section('performance')
+             self.video_config = self.config.get_section('video_analysis', {})
++            self.runtime_frame_step = self._resolve_runtime_frame_step()
++            self._runtime_frame_counter = 0
+             self.alert_cooldown = self.alert_config['cooldown']
+             
+             # 更新显示管理器的性能监控配置
+@@ -1695,6 +1713,10 @@ class Application:
+         if skip_detection:
+             return None, {}
+ 
++        self._runtime_frame_counter += 1
++        if self.runtime_frame_step > 1 and ((self._runtime_frame_counter - 1) % self.runtime_frame_step != 0):
++            return None, {}
++
+         self.detector.performance_monitor.update_frame()
+         self.detector.performance_monitor.calculate_fps()
+         self.frame_count += 1
+diff --git a/src/core/detector.py b/src/core/detector.py
+index fc4758d..a19b441 100755
+--- a/src/core/detector.py
++++ b/src/core/detector.py
+@@ -170,13 +170,34 @@ class CheatingDetector:
+         self.mediapipe_available = False
+         
+         # YOLO模型
+-        yolo_config = self.config.get_section('models')['yolo']
++        yolo_config = dict(self.config.get_section('models')['yolo'])
++        cpu_accel_cfg = self.config.get_section('cpu_acceleration', {})
++        accel_mode = str(cpu_accel_cfg.get('mode', 'off')).strip().lower()
++        accel_profiles = cpu_accel_cfg.get('profiles', {}) if isinstance(cpu_accel_cfg, dict) else {}
++        active_profile = accel_profiles.get(accel_mode, {}) if isinstance(accel_profiles, dict) else {}
++        if isinstance(active_profile, dict) and active_profile:
++            model_path = active_profile.get('pose_model_path')
++            detect_model_path = active_profile.get('detect_model_path')
++            inference_imgsz = active_profile.get('inference_imgsz')
++            if model_path:
++                yolo_config['model_path'] = model_path
++            if detect_model_path:
++                yolo_config['detect_model_path'] = detect_model_path
++            if inference_imgsz:
++                yolo_config['inference_imgsz'] = inference_imgsz
++            self.logger.info(
++                f"CPU 加速配置已启用: mode={accel_mode}, "
++                f"pose={yolo_config.get('model_path')}, "
++                f"detect={yolo_config.get('detect_model_path')}, "
++                f"imgsz={yolo_config.get('inference_imgsz')}"
++            )
+         try:
+             self.yolo_model = YOLOModel(
+                 model_path=yolo_config['model_path'],
+                 use_half_precision=yolo_config['use_half_precision'],
+                 optimize_model=yolo_config['optimize_model'],
+                 onnx_path=yolo_config.get('onnx_path'),
++                inference_imgsz=yolo_config.get('inference_imgsz'),
+                 use_yolov13_repo=yolo_config.get('use_yolov13_repo', False),
+                 yolov13_repo_path=yolo_config.get('yolov13_repo_path'),
+                 device=yolo_config.get('device', 'auto'),
+@@ -207,11 +228,16 @@ class CheatingDetector:
+                 if detect_model_path and detect_model_path != yolo_config.get('model_path'):
+                     self.logger.info(f"当前模型不含手机类别，加载检测专用模型: {detect_model_path}")
+                     try:
++                        detect_onnx_path = None
++                        base_onnx_path = yolo_config.get('onnx_path')
++                        if base_onnx_path:
++                            detect_onnx_path = os.path.splitext(detect_model_path)[0] + ".onnx"
+                         self.phone_yolo_model = YOLOModel(
+                             model_path=detect_model_path,
+                             use_half_precision=yolo_config['use_half_precision'],
+                             optimize_model=yolo_config['optimize_model'],
+-                            onnx_path=yolo_config.get('onnx_path'),
++                            onnx_path=detect_onnx_path,
++                            inference_imgsz=yolo_config.get('inference_imgsz'),
+                             use_yolov13_repo=yolo_config.get('use_yolov13_repo', False),
+                             yolov13_repo_path=yolo_config.get('yolov13_repo_path'),
+                             device=yolo_config.get('device', 'auto'),
+diff --git a/src/models/yolo_model.py b/src/models/yolo_model.py
+index 6ef0bed..22d5938 100755
+--- a/src/models/yolo_model.py
++++ b/src/models/yolo_model.py
+@@ -61,6 +61,7 @@ class YOLOModel:
+                  use_half_precision: bool = True,
+                  optimize_model: bool = False,
+                  onnx_path: Optional[str] = None,
++                 inference_imgsz: Optional[int] = None,
+                  use_yolov13_repo: bool = False,
+                  yolov13_repo_path: Optional[str] = None,
+                  device: str = "auto",
+@@ -80,12 +81,13 @@ class YOLOModel:
+             use_half_precision: 是否使用半精度推理
+             optimize_model: 是否优化模型
+             onnx_path: ONNX模型路径
++            inference_imgsz: 推理输入尺寸（如 640/512），None 为模型默认尺寸
+             use_yolov13_repo: 是否使用独立的 YOLOv13 仓库
+             yolov13_repo_path: YOLOv13 仓库路径
+             device: 设备选择 ("auto", "cuda", "cuda:0", "cpu")
+             gpu_memory_fraction: GPU 内存使用比例 (0.0-1.0)
+             enable_tensorrt: 是否启用 TensorRT 加速（需要 NVIDIA GPU）
+-            enable_onnx_runtime: 是否使用 ONNX Runtime GPU 加速
++            enable_onnx_runtime: 是否使用 ONNX Runtime 加速（GPU/CPU）
+             tensorrt_path: TensorRT 引擎文件路径
+             enable_quantization: 是否启用模型量化（INT8）
+             quantization_type: 量化类型 ("int8", "dynamic")
+@@ -97,6 +99,7 @@ class YOLOModel:
+         self.use_half_precision = use_half_precision
+         self.optimize_model = optimize_model
+         self.onnx_path = onnx_path or model_path.replace('.pt', '.onnx')
++        self.inference_imgsz = int(inference_imgsz) if inference_imgsz else None
+         self.use_yolov13_repo = use_yolov13_repo
+         self.yolov13_repo_path = yolov13_repo_path
+         self.device = device
+@@ -382,8 +385,8 @@ class YOLOModel:
+             if self._try_load_tensorrt():
+                 return
+         
+-        # 尝试 ONNX Runtime GPU
+-        if self.enable_onnx_runtime and self.device_id.startswith("cuda"):
++        # 尝试 ONNX Runtime（优先在已有 ONNX 文件上直接切换后端）
++        if self.enable_onnx_runtime:
+             if self._try_load_onnx_runtime():
+                 return
+         
+@@ -430,6 +433,11 @@ class YOLOModel:
+                 logger.warning("量化导出失败，将使用标准ONNX模型")
+                 # 回退到标准ONNX路径
+                 self.onnx_path = self.model_path.replace('.pt', '.onnx')
++
++        # ONNX 导出后再次尝试切换 ONNX Runtime（覆盖首次无 onnx 文件的场景）
++        if self.enable_onnx_runtime:
++            if self._try_load_onnx_runtime():
++                return
+         
+         # 尝试导出 TensorRT（如果启用）
+         if self.enable_tensorrt and self.device_id.startswith("cuda"):
+@@ -653,14 +661,15 @@ class YOLOModel:
+             logger.warning("提示: 确保已安装 TensorRT 库")
+     
+     def _try_load_onnx_runtime(self) -> bool:
+-        """尝试使用 ONNX Runtime GPU 加速"""
++        """尝试使用 ONNX Runtime（GPU/CPU）加速。"""
+         import logging
+         logger = logging.getLogger("CheatingDetection")
+         
+         # 检查 onnxruntime 是否可用
+         if not ONNXRUNTIME_AVAILABLE or ort is None:
+             logger.warning("onnxruntime 未安装，跳过 ONNX Runtime 加速")
+-            logger.info("安装命令: pip install onnxruntime-gpu")
++            logger.info("CPU 安装命令: pip install onnxruntime")
++            logger.info("GPU 安装命令: pip install onnxruntime-gpu")
+             return False
+         
+         # 检查 ONNX 文件是否存在
+@@ -669,30 +678,16 @@ class YOLOModel:
+             return False
+         
+         try:
+-            logger.info("使用 ONNX Runtime GPU 加速...")
+-            
+-            # 配置 ONNX Runtime 提供程序
+-            providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+-            
+-            # 创建 ONNX Runtime session
+-            sess_options = ort.SessionOptions()
+-            sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+-            
+-            self.onnx_session = ort.InferenceSession(
+-                self.onnx_path,
+-                sess_options=sess_options,
+-                providers=providers
+-            )
+-            
+-            # 检查是否使用了 GPU
+-            if 'CUDAExecutionProvider' in self.onnx_session.get_providers():
+-                logger.info("ONNX Runtime GPU 加速已启用")
+-                self.model_type = 'onnx_runtime'
+-                return True
++            # 通过 ultralytics 加载 ONNX，内部将使用 onnxruntime 后端
++            # 这样可复用现有预处理/后处理流程，避免自维护推理解码。
++            self.model = UltralyticsYOLO(self.onnx_path)
++            self.model_type = 'onnx_runtime'
++            self.onnx_session = None
++            if self.device_id.startswith("cuda"):
++                logger.info("ONNX Runtime 后端已启用（CUDA 设备）")
+             else:
+-                logger.warning("ONNX Runtime 使用 CPU，回退到标准模型")
+-                self.onnx_session = None
+-                return False
++                logger.info("ONNX Runtime 后端已启用（CPU 设备）")
++            return True
+         except Exception as e:
+             logger.warning(f"ONNX Runtime 加载失败: {e}，回退到标准模型")
+             self.onnx_session = None
+@@ -708,18 +703,31 @@ class YOLOModel:
+         Returns:
+             检测结果(兼容 ultralytics 格式)
+         """
++        predict_kwargs = {
++            "classes": classes,
++            "verbose": verbose,
++            "device": self.device_id,
++        }
++        if self.inference_imgsz:
++            predict_kwargs["imgsz"] = self.inference_imgsz
++
+         if self.model_type == 'tensorrt':
+             # TensorRT 推理
+-            return self.model(frame, classes=classes, verbose=verbose)
++            return self.model(frame, **predict_kwargs)
+         elif self.model_type == 'onnx_runtime':
+-            # ONNX Runtime 推理
+-            return self._predict_onnx_runtime(frame, classes, verbose)
++            # ONNX Runtime（通过 ultralytics ONNX 后端）
++            return self.model(frame, **predict_kwargs)
+         elif self.model_type == 'yolov13_repo':
+             # YOLOv13 独立仓库
+-            return self._predict_yolov13_repo(frame, classes, verbose)
++            return self._predict_yolov13_repo(
++                frame,
++                classes=classes,
++                verbose=verbose,
++                imgsz=self.inference_imgsz,
++            )
+         else:
+             # ultralytics 标准实现，自动使用配置的设备
+-            return self.model(frame, classes=classes, verbose=verbose, device=self.device_id)
++            return self.model(frame, **predict_kwargs)
+     
+     def _predict_onnx_runtime(self, frame, classes: Optional[list] = None, verbose: bool = False):
+         """
+@@ -738,7 +746,13 @@ class YOLOModel:
+         logger.warning("ONNX Runtime 推理需要完整的预处理/后处理，暂时使用标准模型")
+         return self.model(frame, classes=classes, verbose=verbose, device=self.device_id)
+     
+-    def _predict_yolov13_repo(self, frame, classes: Optional[list] = None, verbose: bool = False):
++    def _predict_yolov13_repo(
++        self,
++        frame,
++        classes: Optional[list] = None,
++        verbose: bool = False,
++        imgsz: Optional[int] = None,
++    ):
+         """
+         YOLOv13 独立仓库的预测方法
+         YOLOv13 仓库的 API 与标准 ultralytics 兼容，可以直接使用
+@@ -753,7 +767,10 @@ class YOLOModel:
+                 import torch
+                 if torch.cuda.is_available():
+                     # 首次预测（会触发 fuse 操作）
+-                    result = self.model(frame, classes=classes, verbose=verbose)
++                    call_kwargs = {"classes": classes, "verbose": verbose}
++                    if imgsz:
++                        call_kwargs["imgsz"] = imgsz
++                    result = self.model(frame, **call_kwargs)
+                     # fuse 完成后，应用半精度
+                     if hasattr(self.model, 'half'):
+                         self.model.half()
+@@ -771,7 +788,10 @@ class YOLOModel:
+                 self._yolov13_half_applied = False
+         
+         # 正常预测
+-        return self.model(frame, classes=classes, verbose=verbose)
++        call_kwargs = {"classes": classes, "verbose": verbose}
++        if imgsz:
++            call_kwargs["imgsz"] = imgsz
++        return self.model(frame, **call_kwargs)
+     
+     def get_class_names(self) -> dict:
+         """
+diff --git a/src/version.py b/src/version.py
+index 21667b3..7619948 100755
+--- a/src/version.py
++++ b/src/version.py
+@@ -1,5 +1,5 @@
+ """版本信息管理模块"""
+-__version__ = "3.7.0"
++__version__ = "3.8.0"
+ 
+ def get_version():
+     """获取当前版本号"""
+diff --git a/yolo26n-pose.pt b/yolo26n-pose.pt
+new file mode 100644
+index 0000000..c8d9c92
+Binary files /dev/null and b/yolo26n-pose.pt differ
+diff --git a/yolo26n.pt b/yolo26n.pt
+new file mode 100644
+index 0000000..be48188
+Binary files /dev/null and b/yolo26n.pt differ
+diff --git a/yolo26s-pose.onnx b/yolo26s-pose.onnx
+new file mode 100644
+index 0000000..d3d2f01
+Binary files /dev/null and b/yolo26s-pose.onnx differ
+diff --git a/yolo26s.onnx b/yolo26s.onnx
+new file mode 100644
+index 0000000..a11ec75
+Binary files /dev/null and b/yolo26s.onnx differ
