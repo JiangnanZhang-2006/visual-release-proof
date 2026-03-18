@@ -1,0 +1,4438 @@
+tag v4.0.0
+Tagger: JiangnanZhang-2006 <zjn.2006@foxmail.com>
+Date:   Wed Mar 18 23:07:20 2026 +0800
+
+Release v4.0.0
+-----BEGIN PGP SIGNATURE-----
+
+iQJPBAABCAA5FiEEen89XXfEA5uGCvoQGGdwMHAF5NwFAmm6v6kbFIAAAAAABAAO
+bWFudTIsMi41KzEuMTIsMCwzAAoJEBhncDBwBeTcGLMP/A2OocfMzJ7fG220nhb1
+gcNaLpsYmKYSAgxBksW0ylwAMp9qooMGBroyPdhjHfAZUngfV7ve8QII0Z8ome41
+gO9/8rhU/rSGn8BUKb881RM4CMNiteR11Jt9q6/jDCZDqL8Y9w/vlOSHRUjglcYF
+110Qrac5mXNv3G22HPqUxdwsg4iceRolr/ZvcWBVm0USDzQtYmuRtYDMns+VAxoy
+2Pqz9zw9gRw0bR6e+IIZl45LOLLtwO330i59613x/blZFgn0IunAER9fbl1uVLUk
+cbx8HC4ROI5Z8eA3ffsiimZExjYoPvlC8qsco/zI+avrNbwgPOaPKA046o8l0ZuR
+SIzb5lakNfzsldWkQ0CO39h6tX34HSpJutSNklAjEb3pq5kGjzRO63Z+7rWOc+9j
+uBN3DF4Ds9sIp/fD+qT5Djaq4eVRZMLTpbU1si78z7U4F4TIalyce/BToOiqzx2k
+fQjlCGLG7x5pWhUuQdCs6c/A6w2OprBQb/LzLSJBLtFUva8+s9YHPhSav+SEjsvI
+0Y6NFBcv2naTlbGM5uOb2j/O69EFJ0+MI0ItrSWS5xWcCXvkuEZ+Bbkyf8IeVU70
+L+r4LLyZEACR3mo65Vt+8VwS38Iuc6z2FvMtNlPvlBaofQL1IXJ0Dkggu/vgXM64
+3Pnmt8wlqdaDl0zaDu8OoNOB
+=GcZl
+-----END PGP SIGNATURE-----
+
+commit 035176eeb2457aea62f234f10e1dc00d2f32a542
+gpg: Signature made Wed Mar 18 23:07:20 2026 CST
+gpg:                using RSA key 7A7F3D5D77C4039B860AFA10186770307005E4DC
+gpg: Good signature from "Jiangnan Zhang (Visual Release Signing) <zjn.2006@foxmail.com>" [ultimate]
+Author: JiangnanZhang-2006 <zjn.2006@foxmail.com>
+Date:   Wed Mar 18 23:07:20 2026 +0800
+
+    release: v4.0.0 Switch the default experience from the local OpenCV window to a browser-first WebUI while adding evidence export and inspection tools.
+    
+    Align release metadata and documentation with the new browser workflow so verification, deployment, and event evidence remain publishable.
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 7c53a31..0d28303 100755
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,26 @@
+ # 更新日志
+ 
++## [4.0.0] - 2026-03-18
++
++### 变更
++
++- 💥 **默认交互入口切换为 WebUI（破坏性变更）**
++  - 默认启动路径从本地 OpenCV 窗口切换为 FastAPI WebUI，主交互改为浏览器 Canvas 渲染
++  - 检测控制、参数调整、历史消息与证据查看统一迁移到 WebUI 面板
++- ✨ **WebUI 证据导出与查看能力增强**
++  - 新增 WebUI 事件证据可选导出，支持按开关分别导出事件视频与原始帧序列
++  - 新增 `outputs/events/raw_frames/<event_id>/` 原始帧证据目录与 `frames.json` 时间戳清单
++  - WebUI 新增最近导出证据列表，支持展开查看清单并跳转截图、清单和单帧证据
++
++### 修复
++
++- 🐛 **修复 WebUI 事件链路与证据体验问题**
++  - 补回 WebUI 告警写回 `outputs/events` 的事件落盘链路，并增加最小化防抖/连续事件保持逻辑
++  - 修复 WebUI 事件收尾阶段的状态字段不完整导致的 `/api/webui/infer` 500 错误
++  - 修复 WebUI 证据视频导出速度偏快的问题，改为基于实际送帧时间估算导出帧率
++
++---
++
+ ## [3.8.0] - 2026-03-17
+ 
+ ### 变更
+diff --git a/Makefile b/Makefile
+index a836319..765beb6 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,6 +1,6 @@
+ POETRY ?= poetry
+ 
+-.PHONY: install run api sync-deps export-proof pruning-benchmark cpu-accel-sweep cpu-fast cpu-baseline
++.PHONY: install run webui api sync-deps export-proof pruning-benchmark cpu-accel-sweep cpu-fast cpu-baseline
+ 
+ install:
+ 	$(POETRY) install
+@@ -8,6 +8,9 @@ install:
+ run:
+ 	$(POETRY) run python main.py
+ 
++webui:
++	$(POETRY) run python main.py
++
+ api:
+ 	$(POETRY) run uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+ 
+diff --git a/README.md b/README.md
+index 3ed561a..9c53a07 100755
+--- a/README.md
++++ b/README.md
+@@ -1,8 +1,8 @@
+ # 监考作弊检测系统
+ 
+-基于 YOLO（当前默认 YOLO26）和 MediaPipe 的实时监考作弊检测系统，支持多种作弊行为检测和 Web API 服务。
++基于 YOLO（当前默认 YOLO26）和 MediaPipe 的实时监考作弊检测系统，支持多种作弊行为检测，默认以 WebUI 方式运行。
+ 
+-当前版本：`v3.8.0`
++当前版本：`v4.0.0`
+ 
+ ## ✨ 特性
+ 
+@@ -10,7 +10,7 @@
+ - 🤖 **多特征融合决策**: 智能融合多个检测特征，提高准确性
+ - 🔄 **FSM 多步骤行为检测**: 使用有限状态机检测传递纸条等复杂行为
+ - ⚡ **性能优化**: 多线程处理、模型优化、实时监控
+-- 🌐 **Web API**: 提供完整的 RESTful API 服务
++- 🌐 **WebUI + Web API**: 默认浏览器 Canvas 渲染，后端输出结构化检测结果，并支持事件证据导出与查看
+ - 📊 **实时监控**: FPS、检测时间等性能指标
+ 
+ ## 📋 系统要求
+@@ -93,13 +93,18 @@ poetry install --no-cache
+ > - macOS/Linux: `bash scripts/tools/export_requirements.sh`
+ > - Windows: `powershell -ExecutionPolicy Bypass -File scripts/tools/export_requirements.ps1`
+ 
+-### 2. 运行主程序
++### 2. 启动 WebUI（默认主程序）
+ 
+ ```bash
+ poetry run python main.py
+ ```
+ 
+-### 3. 启动 Web API
++启动后访问：
++
++- WebUI: <http://127.0.0.1:8000/webui>
++- API 文档: <http://127.0.0.1:8000/docs>
++
++### 3. 仅启动 Web API（调试）
+ 
+ ```bash
+ poetry run python run_api.py
+@@ -148,6 +153,7 @@ poetry run uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+ - [API 使用指南](docs/API_GUIDE.md) - Web API 完整文档
+ - [发布签名规范](docs/RELEASE_SIGNING.md) - 发布者身份验证与签名流程（阶段一默认 GPG）
+ - [部署指南](docs/DEPLOYMENT.md) - 安装部署与可执行文件签名校验（B 方案）
++- [更新日志](CHANGELOG.md) - 版本发布记录与本次变更说明
+ 
+ ### 核心功能文档
+ 
+diff --git a/VERSION b/VERSION
+index 1981190..fcdb2e1 100755
+--- a/VERSION
++++ b/VERSION
+@@ -1 +1 @@
+-3.8.0
++4.0.0
+diff --git a/api/main.py b/api/main.py
+index 910cb2e..1394264 100755
+--- a/api/main.py
++++ b/api/main.py
+@@ -1,420 +1,1148 @@
+-"""监考作弊检测系统 Web API 服务"""
+-from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks
+-from fastapi.responses import StreamingResponse, JSONResponse
+-from fastapi.middleware.cors import CORSMiddleware
+-from pydantic import BaseModel
+-from typing import List, Optional, Dict
+-import cv2
+-import numpy as np
+-import io
+-import base64
+-import json
+-from datetime import datetime
+-import asyncio
+-import threading
+-import queue
+-
+-from src.core.config_loader import ConfigLoader
+-from src.core.detector import CheatingDetector
+-from src.utils.logger import SystemLogger
+-from src.version import __version__
+-
+-app = FastAPI(
+-    title="监考作弊检测系统 API",
+-    description="提供监考作弊检测功能的 RESTful API 服务",
+-    version=__version__
+-)
+-
+-# CORS中间件
+-app.add_middleware(
+-    CORSMiddleware,
+-    allow_origins=["*"],  # 生产环境应限制具体域名
+-    allow_credentials=True,
+-    allow_methods=["*"],
+-    allow_headers=["*"],
+-)
+-
+-# 全局变量
+-detector: Optional[CheatingDetector] = None
+-config: Optional[ConfigLoader] = None
+-logger: Optional[SystemLogger] = None
+-detection_status = {
+-    "running": False,
+-    "started_at": None,
+-    "total_frames": 0,
+-    "detection_count": 0
+-}
+-
+-
+-# Pydantic模型
+-class DetectionRequest(BaseModel):
+-    """检测请求模型"""
+-    image_base64: Optional[str] = None
+-    threshold: Optional[float] = 0.6
+-
+-
+-class DetectionResponse(BaseModel):
+-    """检测响应模型"""
+-    cheating_detected: bool
+-    alerts: List[str]
+-    confidence: float
+-    fusion_score: Optional[float] = None
+-    detection_time: float
+-    timestamp: str
+-
+-
+-class StatusResponse(BaseModel):
+-    """状态响应模型"""
+-    running: bool
+-    started_at: Optional[str]
+-    total_frames: int
+-    detection_count: int
+-    fps: Optional[float] = None
+-
+-
+-class StatisticsResponse(BaseModel):
+-    """统计信息响应模型"""
+-    total_events: int
+-    events: List[Dict]
+-    performance: Dict
+-    generated_at: str
+-
+-
+-# 初始化
+-@app.on_event("startup")
+-async def startup_event():
+-    """启动时初始化"""
+-    global detector, config, logger
+-    
+-    try:
+-        config = ConfigLoader("config/config.yaml")
+-        
+-        logging_config = config.get_section('logging')
+-        logger = SystemLogger(
+-            name="CheatingDetectionAPI",
+-            log_dir=logging_config.get('log_dir', 'logs'),
+-            log_level=logging_config.get('log_level', 'INFO'),
+-            log_to_file=logging_config.get('log_to_file', True),
+-            log_to_console=logging_config.get('log_to_console', True),
+-            max_bytes=logging_config.get('max_bytes', 10485760),
+-            backup_count=logging_config.get('backup_count', 5)
+-        )
+-        
+-        detector = CheatingDetector(config)
+-        logger.info("API服务启动成功")
+-    except Exception as e:
+-        print(f"初始化失败: {e}")
+-        raise
+-
+-
+-@app.on_event("shutdown")
+-async def shutdown_event():
+-    """关闭时清理"""
+-    global detector
+-    if detector:
+-        detector.cleanup()
+-        logger.info("API服务已关闭")
+-
+-
+-# API端点
+-@app.get("/")
+-async def root():
+-    """根路径"""
+-    return {
+-        "message": "监考作弊检测系统 API",
+-        "version": __version__,
+-        "docs": "/docs",
+-        "status": "/api/status"
+-    }
+-
+-
+-@app.get("/api/status", response_model=StatusResponse)
+-async def get_status():
+-    """获取检测状态"""
+-    global detection_status, detector
+-    
+-    status = detection_status.copy()
+-    
+-    if detector and detector.performance_monitor:
+-        status["fps"] = detector.performance_monitor.get_avg_fps()
+-    
+-    return StatusResponse(**status)
+-
+-
+-@app.post("/api/detect/image", response_model=DetectionResponse)
+-async def detect_image(
+-    file: UploadFile = File(...),
+-    threshold: float = 0.6
+-):
+-    """
+-    上传图片进行检测
+-    - **file**: 图片文件
+-    - **threshold**: 检测阈值(0-1)
+-    """
+-    global detector
+-    
+-    if not detector:
+-        raise HTTPException(status_code=500, detail="检测器未初始化")
+-    
+-    try:
+-        # 读取图片
+-        contents = await file.read()
+-        nparr = np.frombuffer(contents, np.uint8)
+-        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+-        
+-        if frame is None:
+-            raise HTTPException(status_code=400, detail="无效的图片格式")
+-        
+-        # 执行检测
+-        result = detector.analyze_frame(frame)
+-        
+-        # 构建响应
+-        response = DetectionResponse(
+-            cheating_detected=result['cheating_detected'],
+-            alerts=result.get('alerts', []),
+-            confidence=result.get('fusion_score', 0.0) if result.get('fusion_score', 0.0) > 0 else 0.5,
+-            fusion_score=result.get('fusion_score'),
+-            detection_time=result.get('detection_time', 0.0),
+-            timestamp=datetime.now().isoformat()
+-        )
+-        
+-        return response
+-        
+-    except Exception as e:
+-        logger.error(f"图片检测失败: {e}", exc_info=True)
+-        raise HTTPException(status_code=500, detail=f"检测失败: {str(e)}")
+-
+-
+-@app.post("/api/detect/base64", response_model=DetectionResponse)
+-async def detect_base64(request: DetectionRequest):
+-    """
+-    使用Base64编码的图片进行检测
+-    - **image_base64**: Base64编码的图片字符串
+-    - **threshold**: 检测阈值(0-1)
+-    """
+-    global detector
+-    
+-    if not detector:
+-        raise HTTPException(status_code=500, detail="检测器未初始化")
+-    
+-    if not request.image_base64:
+-        raise HTTPException(status_code=400, detail="缺少图片数据")
+-    
+-    try:
+-        # 解码Base64图片
+-        image_data = base64.b64decode(request.image_base64)
+-        nparr = np.frombuffer(image_data, np.uint8)
+-        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+-        
+-        if frame is None:
+-            raise HTTPException(status_code=400, detail="无效的图片格式")
+-        
+-        # 执行检测
+-        result = detector.analyze_frame(frame)
+-        
+-        # 构建响应
+-        response = DetectionResponse(
+-            cheating_detected=result['cheating_detected'],
+-            alerts=result.get('alerts', []),
+-            confidence=result.get('fusion_score', 0.0) if result.get('fusion_score', 0.0) > 0 else 0.5,
+-            fusion_score=result.get('fusion_score'),
+-            detection_time=result.get('detection_time', 0.0),
+-            timestamp=datetime.now().isoformat()
+-        )
+-        
+-        return response
+-        
+-    except Exception as e:
+-        logger.error(f"Base64图片检测失败: {e}", exc_info=True)
+-        raise HTTPException(status_code=500, detail=f"检测失败: {str(e)}")
+-
+-
+-@app.post("/api/start")
+-async def start_detection():
+-    """启动实时检测"""
+-    global detector, detection_status
+-    
+-    if not detector:
+-        raise HTTPException(status_code=500, detail="检测器未初始化")
+-    
+-    if detection_status["running"]:
+-        raise HTTPException(status_code=400, detail="检测已在运行中")
+-    
+-    try:
+-        detector.start_detection_thread()
+-        detection_status["running"] = True
+-        detection_status["started_at"] = datetime.now().isoformat()
+-        detection_status["total_frames"] = 0
+-        detection_status["detection_count"] = 0
+-        
+-        logger.info("实时检测已启动")
+-        return {"message": "检测已启动", "status": "running"}
+-        
+-    except Exception as e:
+-        logger.error(f"启动检测失败: {e}", exc_info=True)
+-        raise HTTPException(status_code=500, detail=f"启动失败: {str(e)}")
+-
+-
+-@app.post("/api/stop")
+-async def stop_detection():
+-    """停止实时检测"""
+-    global detector, detection_status
+-    
+-    if not detector:
+-        raise HTTPException(status_code=500, detail="检测器未初始化")
+-    
+-    if not detection_status["running"]:
+-        raise HTTPException(status_code=400, detail="检测未在运行")
+-    
+-    try:
+-        detector.stop_detection_thread()
+-        detection_status["running"] = False
+-        
+-        logger.info("实时检测已停止")
+-        return {"message": "检测已停止", "status": "stopped"}
+-        
+-    except Exception as e:
+-        logger.error(f"停止检测失败: {e}", exc_info=True)
+-        raise HTTPException(status_code=500, detail=f"停止失败: {str(e)}")
+-
+-
+-@app.get("/api/results")
+-async def get_results():
+-    """获取最新的检测结果"""
+-    global detector
+-    
+-    if not detector:
+-        raise HTTPException(status_code=500, detail="检测器未初始化")
+-    
+-    if not detection_status["running"]:
+-        raise HTTPException(status_code=400, detail="检测未在运行")
+-    
+-    try:
+-        # 从结果队列获取最新结果
+-        result = None
+-        try:
+-            result = detector.result_queue.get_nowait()
+-        except queue.Empty:
+-            return {"message": "暂无新结果"}
+-        
+-        # 转换为响应格式
+-        response = {
+-            "cheating_detected": result.get('cheating_detected', False),
+-            "alerts": result.get('alerts', []),
+-            "fusion_score": result.get('fusion_score', 0.0),
+-            "fsm_results": result.get('fsm_results', {}),
+-            "timestamp": datetime.now().isoformat()
+-        }
+-        
+-        return response
+-        
+-    except Exception as e:
+-        logger.error(f"获取结果失败: {e}", exc_info=True)
+-        raise HTTPException(status_code=500, detail=f"获取结果失败: {str(e)}")
+-
+-
+-@app.get("/api/statistics", response_model=StatisticsResponse)
+-async def get_statistics():
+-    """获取检测统计信息"""
+-    global detector
+-    
+-    if not detector:
+-        raise HTTPException(status_code=500, detail="检测器未初始化")
+-    
+-    try:
+-        # 导出报告
+-        report_file = detector.export_report()
+-        
+-        # 读取报告内容
+-        with open(report_file, 'r', encoding='utf-8') as f:
+-            report_data = json.load(f)
+-        
+-        return StatisticsResponse(**report_data)
+-        
+-    except Exception as e:
+-        logger.error(f"获取统计信息失败: {e}", exc_info=True)
+-        raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
+-
+-
+-@app.get("/api/stream")
+-async def stream_detection():
+-    """实时检测流(Server-Sent Events)"""
+-    global detector, detection_status
+-    
+-    if not detector:
+-        raise HTTPException(status_code=500, detail="检测器未初始化")
+-    
+-    if not detection_status["running"]:
+-        raise HTTPException(status_code=400, detail="检测未在运行")
+-    
+-    async def generate():
+-        """生成SSE流"""
+-        while detection_status["running"]:
+-            try:
+-                # 从结果队列获取结果
+-                result = detector.result_queue.get(timeout=1.0)
+-                
+-                # 更新统计
+-                detection_status["total_frames"] += 1
+-                if result.get('cheating_detected'):
+-                    detection_status["detection_count"] += 1
+-                
+-                # 构建SSE数据
+-                data = {
+-                    "cheating_detected": result.get('cheating_detected', False),
+-                    "alerts": result.get('alerts', []),
+-                    "fusion_score": result.get('fusion_score', 0.0),
+-                    "fsm_results": result.get('fsm_results', {}),
+-                    "timestamp": datetime.now().isoformat()
+-                }
+-                
+-                yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+-                
+-            except queue.Empty:
+-                # 发送心跳
+-                yield f"data: {json.dumps({'heartbeat': True}, ensure_ascii=False)}\n\n"
+-            except Exception as e:
+-                logger.error(f"流生成错误: {e}", exc_info=True)
+-                break
+-    
+-    return StreamingResponse(
+-        generate(),
+-        media_type="text/event-stream",
+-        headers={
+-            "Cache-Control": "no-cache",
+-            "Connection": "keep-alive",
+-            "X-Accel-Buffering": "no"
+-        }
+-    )
+-
+-
+-@app.get("/api/config")
+-async def get_config():
+-    """获取当前配置"""
+-    global config
+-    
+-    if not config:
+-        raise HTTPException(status_code=500, detail="配置未加载")
+-    
+-    try:
+-        # 返回所有配置(排除敏感信息)
+-        all_config = {}
+-        sections = [
+-            'models', 'detection_thresholds', 'camera', 'threading',
+-            'alert', 'display', 'performance', 'decision_fusion', 'fsm_detection'
+-        ]
+-        
+-        for section in sections:
+-            all_config[section] = config.get_section(section)
+-        
+-        return all_config
+-        
+-    except Exception as e:
+-        logger.error(f"获取配置失败: {e}", exc_info=True)
+-        raise HTTPException(status_code=500, detail=f"获取配置失败: {str(e)}")
+-
+-
+-if __name__ == "__main__":
+-    import uvicorn
+-    uvicorn.run(app, host="0.0.0.0", port=8000)
+-
++"""监考作弊检测系统 Web API 服务"""
++from fastapi import FastAPI, HTTPException, UploadFile, File
++from fastapi.responses import StreamingResponse, FileResponse
++from fastapi.middleware.cors import CORSMiddleware
++from fastapi.staticfiles import StaticFiles
++from pydantic import BaseModel
++from typing import List, Optional, Dict, Any
++import cv2
++import numpy as np
++import base64
++import json
++from datetime import datetime
++import asyncio
++import threading
++import queue
++import logging
++import time
++from pathlib import Path
++from collections import deque
++
++from src.core.config_loader import ConfigLoader
++from src.core.detector import CheatingDetector
++from src.managers.file_manager import FileManager
++from src.utils.logger import SystemLogger
++from src.version import __version__
++
++app = FastAPI(
++    title="监考作弊检测系统 API",
++    description="提供监考作弊检测功能的 RESTful API 服务",
++    version=__version__
++)
++
++PROJECT_ROOT = Path(__file__).resolve().parent.parent
++STATIC_DIR = Path(__file__).resolve().parent / "static"
++OUTPUTS_DIR = PROJECT_ROOT / "outputs"
++
++# CORS中间件
++app.add_middleware(
++    CORSMiddleware,
++    allow_origins=["*"],  # 生产环境应限制具体域名
++    allow_credentials=True,
++    allow_methods=["*"],
++    allow_headers=["*"],
++)
++
++if STATIC_DIR.exists():
++    app.mount("/webui/static", StaticFiles(directory=str(STATIC_DIR)), name="webui-static")
++OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
++app.mount("/webui/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="webui-outputs")
++
++# 全局变量
++detector: Optional[CheatingDetector] = None
++config: Optional[ConfigLoader] = None
++logger: Optional[SystemLogger] = None
++file_manager: Optional[FileManager] = None
++detection_status = {
++    "running": False,
++    "started_at": None,
++    "total_frames": 0,
++    "detection_count": 0
++}
++
++webui_status = {
++    "running": False,
++    "session_started_at": None,
++    "session_total_frames": 0,
++    "session_detection_count": 0,
++    "last_inference_at": None,
++}
++webui_stream_buffer: deque[Dict[str, Any]] = deque(maxlen=200)
++webui_stream_lock = threading.Lock()
++webui_evidence_buffer: deque[Any] = deque()
++webui_active_event: Optional[Dict[str, Any]] = None
++webui_evidence_pre_seconds = 3.0
++webui_evidence_post_seconds = 3.0
++webui_evidence_buffer_seconds = 5.0
++webui_runtime_fps = 30.0
++webui_alert_hold_seconds = 2.0
++webui_settings: Dict[str, Any] = {
++    "threshold": 0.6,
++    "infer_interval_ms": 120,
++    "jpeg_quality": 0.8,
++    "draw_skeleton": True,
++    "draw_person_bbox": True,
++    "draw_suspicious_regions": True,
++    "draw_point_index": False,
++    "head_only_pose": False,
++    "draw_pose_label": True,
++    "preview_mode": "analysis",
++    "export_event_video": True,
++    "export_raw_frames": True,
++}
++
++
++class _InferAccessLogFilter(logging.Filter):
++    """仅抑制 /api/webui/infer 200 的访问日志。"""
++
++    def filter(self, record: logging.LogRecord) -> bool:
++        message = record.getMessage()
++        if '"POST /api/webui/infer' in message and '" 200' in message:
++            return False
++        return True
++
++
++def _setup_access_log_filter() -> None:
++    access_logger = logging.getLogger("uvicorn.access")
++    if getattr(access_logger, "_infer_filter_installed", False):
++        return
++    access_logger.addFilter(_InferAccessLogFilter())
++    access_logger._infer_filter_installed = True
++
++
++# Pydantic模型
++class DetectionRequest(BaseModel):
++    """检测请求模型"""
++    image_base64: Optional[str] = None
++    threshold: Optional[float] = 0.6
++
++
++class DetectionResponse(BaseModel):
++    """检测响应模型"""
++    cheating_detected: bool
++    alerts: List[str]
++    confidence: float
++    fusion_score: Optional[float] = None
++    detection_time: float
++    timestamp: str
++
++
++class StatusResponse(BaseModel):
++    """状态响应模型"""
++    running: bool
++    started_at: Optional[str]
++    total_frames: int
++    detection_count: int
++    fps: Optional[float] = None
++
++
++class StatisticsResponse(BaseModel):
++    """统计信息响应模型"""
++    total_events: int
++    events: List[Dict]
++    performance: Dict
++    generated_at: str
++
++
++class WebUIControlRequest(BaseModel):
++    """WebUI 会话控制参数。"""
++    threshold: float = 0.6
++
++
++class WebUISettingsRequest(BaseModel):
++    """WebUI 参数调整。"""
++    threshold: Optional[float] = None
++    infer_interval_ms: Optional[int] = None
++    jpeg_quality: Optional[float] = None
++    draw_skeleton: Optional[bool] = None
++    draw_person_bbox: Optional[bool] = None
++    draw_suspicious_regions: Optional[bool] = None
++    draw_point_index: Optional[bool] = None
++    head_only_pose: Optional[bool] = None
++    draw_pose_label: Optional[bool] = None
++    preview_mode: Optional[str] = None
++    export_event_video: Optional[bool] = None
++    export_raw_frames: Optional[bool] = None
++
++
++class FrameUIResult(BaseModel):
++    """前端 Canvas 渲染契约。"""
++    timestamp: str
++    frame_index: int
++    frame_size: Dict[str, int]
++    cheating_detected: bool
++    alerts: List[str]
++    fusion_score: float
++    detection_time: float
++    max_alert_level: Optional[str] = None
++    classified_alerts: List[Dict[str, Any]]
++    person_bboxes: List[List[int]]
++    suspicious_regions: List[Dict[str, Any]]
++    pose_landmarks: List[Any]
++    pose_people: List[Dict[str, Any]]
++    fsm_results: Dict[str, Any]
++    performance: Dict[str, Any]
++    event_started: bool = False
++    event_finished: bool = False
++    event_holding: bool = False
++    event_persisted: bool = False
++    event_id: Optional[str] = None
++    event_clip_path: Optional[str] = None
++    event_raw_frames_path: Optional[str] = None
++
++
++def _json_safe(value: Any) -> Any:
++    """把 numpy/枚举/复杂对象转换成可 JSON 化结构。"""
++    if value is None or isinstance(value, (str, int, float, bool)):
++        return value
++    if isinstance(value, np.generic):
++        return value.item()
++    if isinstance(value, np.ndarray):
++        return value.tolist()
++    if isinstance(value, (list, tuple)):
++        return [_json_safe(v) for v in value]
++    if isinstance(value, dict):
++        return {str(k): _json_safe(v) for k, v in value.items()}
++    if hasattr(value, "value"):  # Enum-like
++        return _json_safe(getattr(value, "value"))
++    if hasattr(value, "__dict__"):
++        return _json_safe(value.__dict__)
++    return str(value)
++
++
++def _extract_landmark_points(
++    pose_landmarks: Any,
++    bbox: Optional[List[int]],
++    frame_width: int,
++    frame_height: int,
++) -> List[Dict[str, Any]]:
++    """把 landmarks 统一转换为整帧像素坐标。"""
++    if pose_landmarks is None:
++        return []
++
++    raw = pose_landmarks
++    if isinstance(pose_landmarks, dict):
++        if isinstance(pose_landmarks.get("landmark"), list):
++            raw = pose_landmarks["landmark"]
++        elif isinstance(pose_landmarks.get("landmarks"), list):
++            raw = pose_landmarks["landmarks"]
++        elif isinstance(pose_landmarks.get("keypoints"), list):
++            raw = pose_landmarks["keypoints"]
++    else:
++        # 兼容 MediaPipe/自定义 LandmarkList 对象
++        if hasattr(pose_landmarks, "landmark") and isinstance(pose_landmarks.landmark, list):
++            raw = pose_landmarks.landmark
++        elif hasattr(pose_landmarks, "landmarks") and isinstance(pose_landmarks.landmarks, list):
++            raw = pose_landmarks.landmarks
++        elif hasattr(pose_landmarks, "keypoints") and isinstance(pose_landmarks.keypoints, list):
++            raw = pose_landmarks.keypoints
++
++    if not isinstance(raw, list):
++        return []
++
++    bbox_x1 = bbox[0] if bbox else 0
++    bbox_y1 = bbox[1] if bbox else 0
++    bbox_w = max(1, (bbox[2] - bbox[0])) if bbox else max(1, frame_width)
++    bbox_h = max(1, (bbox[3] - bbox[1])) if bbox else max(1, frame_height)
++
++    points: List[Dict[str, Any]] = []
++    for idx, point in enumerate(raw):
++        x = None
++        y = None
++        visibility = None
++        if isinstance(point, dict):
++            x = point.get("x")
++            y = point.get("y")
++            visibility = point.get("visibility")
++        elif hasattr(point, "x") and hasattr(point, "y"):
++            x = getattr(point, "x", None)
++            y = getattr(point, "y", None)
++            visibility = getattr(point, "visibility", None)
++        elif isinstance(point, (list, tuple)) and len(point) >= 2:
++            x = point[0]
++            y = point[1]
++            if len(point) >= 3:
++                visibility = point[2]
++
++        try:
++            px = float(x)
++            py = float(y)
++        except Exception:
++            continue
++
++        normalized = 0.0 <= px <= 1.2 and 0.0 <= py <= 1.2
++        if normalized:
++            frame_x = bbox_x1 + px * bbox_w
++            frame_y = bbox_y1 + py * bbox_h
++        else:
++            frame_x = px
++            frame_y = py
++
++        points.append(
++            {
++                "index": idx,
++                "x": float(frame_x),
++                "y": float(frame_y),
++                "visibility": float(visibility) if visibility is not None else None,
++            }
++        )
++    return points
++
++
++def _build_frame_ui_result(result: Dict[str, Any], frame: np.ndarray, frame_index: int) -> FrameUIResult:
++    """从检测结果构建前端渲染契约。"""
++    h, w = frame.shape[:2]
++    person_bboxes: List[List[int]] = []
++    raw_bboxes = result.get("all_person_bboxes") or []
++    if not raw_bboxes and result.get("person_bbox"):
++        raw_bboxes = [result.get("person_bbox")]
++    for bbox in raw_bboxes:
++        if not bbox:
++            continue
++        try:
++            x1, y1, x2, y2 = bbox
++            person_bboxes.append([int(x1), int(y1), int(x2), int(y2)])
++        except Exception:
++            continue
++
++    suspicious_regions: List[Dict[str, Any]] = []
++    for region in (result.get("suspicious_regions") or []):
++        try:
++            region_type, bbox, confidence = region
++            x1, y1, x2, y2 = bbox
++            suspicious_regions.append(
++                {
++                    "type": str(region_type),
++                    "bbox": [int(x1), int(y1), int(x2), int(y2)],
++                    "confidence": float(confidence),
++                }
++            )
++        except Exception:
++            continue
++
++    raw_pose_landmarks = result.get("all_pose_landmarks") or []
++    pose_people: List[Dict[str, Any]] = []
++    pose_landmarks: List[Any] = []
++    max_len = max(len(person_bboxes), len(raw_pose_landmarks))
++    for idx in range(max_len):
++        bbox = person_bboxes[idx] if idx < len(person_bboxes) else None
++        raw_pose = raw_pose_landmarks[idx] if idx < len(raw_pose_landmarks) else None
++        points = _extract_landmark_points(raw_pose, bbox, w, h)
++        pose_people.append(
++            {
++                "person_index": idx,
++                "bbox": bbox,
++                "coordinate_space": "frame_pixels",
++                "keypoints": points,
++            }
++        )
++        pose_landmarks.append(points)
++
++    fps = None
++    if detector and detector.performance_monitor:
++        fps = detector.performance_monitor.get_avg_fps()
++
++    return FrameUIResult(
++        timestamp=datetime.now().isoformat(),
++        frame_index=frame_index,
++        frame_size={"width": int(w), "height": int(h)},
++        cheating_detected=bool(result.get("cheating_detected", False)),
++        alerts=[str(x) for x in (result.get("alerts") or [])],
++        fusion_score=float(result.get("fusion_score", 0.0) or 0.0),
++        detection_time=float(result.get("detection_time", 0.0) or 0.0),
++        max_alert_level=_json_safe(result.get("max_alert_level")),
++        classified_alerts=_json_safe(result.get("classified_alerts") or []),
++        person_bboxes=person_bboxes,
++        suspicious_regions=suspicious_regions,
++        pose_landmarks=pose_landmarks,
++        pose_people=pose_people,
++        fsm_results=_json_safe(result.get("fsm_results") or {}),
++        performance={
++            "fps": float(fps) if fps is not None else None,
++            "queue_size": detector.result_queue.qsize() if detector else 0,
++        },
++    )
++
++
++def _apply_threshold(payload: FrameUIResult, threshold: float) -> FrameUIResult:
++    """按融合分数阈值更新作弊判定，便于 WebUI 调参。"""
++    if payload.fusion_score >= float(threshold):
++        return payload
++
++    data = payload.model_dump()
++    data["cheating_detected"] = False
++    data["alerts"] = []
++    data["classified_alerts"] = []
++    data["max_alert_level"] = None
++    return FrameUIResult(**data)
++
++
++def _extract_fsm_state(result: Dict[str, Any]) -> Optional[str]:
++    """提取一个可读的 FSM 状态摘要。"""
++    fsm_results = result.get("fsm_results") or {}
++    if not isinstance(fsm_results, dict):
++        return None
++    for _, fsm_result in fsm_results.items():
++        if not isinstance(fsm_result, dict):
++            continue
++        state_info = fsm_result.get("state_info") or {}
++        if isinstance(state_info, dict) and state_info.get("current_state"):
++            return str(state_info.get("current_state"))
++    return None
++
++
++def _empty_webui_event_state() -> Dict[str, Any]:
++    """返回统一的 WebUI 事件状态结构。"""
++    return {
++        "event_started": False,
++        "event_finished": False,
++        "event_holding": False,
++        "event_persisted": False,
++        "event_id": None,
++        "event_clip_path": None,
++        "event_raw_frames_path": None,
++    }
++
++
++def _init_webui_evidence_runtime() -> None:
++    """初始化 WebUI 证据采集参数。"""
++    global webui_evidence_pre_seconds, webui_evidence_post_seconds, webui_evidence_buffer_seconds, webui_runtime_fps, webui_alert_hold_seconds
++    evidence_config = config.get_section("evidence", {}) if config else {}
++    camera_config = config.get_section("camera", {}) if config else {}
++    alert_config = config.get_section("alert", {}) if config else {}
++    stabilizer_cfg = alert_config.get("stabilizer", {}) if isinstance(alert_config, dict) else {}
++    webui_evidence_pre_seconds = max(0.0, float(evidence_config.get("pre_seconds", 3.0)))
++    webui_evidence_post_seconds = max(0.0, float(evidence_config.get("post_seconds", 3.0)))
++    webui_evidence_buffer_seconds = max(5.0, webui_evidence_pre_seconds + 2.0)
++    webui_runtime_fps = float(camera_config.get("fps", 30.0) or 30.0)
++    webui_alert_hold_seconds = max(
++        float(alert_config.get("cooldown", 2.0) or 2.0),
++        float(stabilizer_cfg.get("cooldown_seconds", 1.2) or 1.2),
++    )
++
++
++def _append_webui_frame(frame: np.ndarray, current_time: float) -> None:
++    """缓存 WebUI 最近帧用于导出证据视频。"""
++    if frame is None:
++        return
++    webui_evidence_buffer.append((current_time, frame.copy()))
++    min_time = current_time - webui_evidence_buffer_seconds
++    while webui_evidence_buffer and webui_evidence_buffer[0][0] < min_time:
++        webui_evidence_buffer.popleft()
++
++
++def _capture_webui_pre_frames(trigger_time: float) -> List[Any]:
++    """截取事件触发前的缓存帧样本（时间戳 + 帧）。"""
++    start_time = trigger_time - webui_evidence_pre_seconds
++    return [(ts, frame.copy()) for ts, frame in webui_evidence_buffer if start_time <= ts <= trigger_time]
++
++
++def _estimate_webui_export_fps(samples: List[Any]) -> float:
++    """按 WebUI 实际送帧时间估算导出视频帧率，避免快放。"""
++    if not samples:
++        interval_ms = max(50.0, float(webui_settings.get("infer_interval_ms", 120) or 120))
++        return max(1.0, min(webui_runtime_fps, 1000.0 / interval_ms))
++
++    timestamps = [float(ts) for ts, _ in samples if ts is not None]
++    if len(timestamps) < 2:
++        interval_ms = max(50.0, float(webui_settings.get("infer_interval_ms", 120) or 120))
++        return max(1.0, min(webui_runtime_fps, 1000.0 / interval_ms))
++
++    duration = max(0.001, timestamps[-1] - timestamps[0])
++    fps = (len(timestamps) - 1) / duration
++    return max(1.0, min(webui_runtime_fps, float(fps)))
++
++
++def _build_webui_event_payload(result: Dict[str, Any], payload: FrameUIResult, event_id: str, trigger_frame: np.ndarray) -> Dict[str, Any]:
++    """构建 WebUI 事件元数据。"""
++    return {
++        "event_id": event_id,
++        "timestamp": payload.timestamp,
++        "fusion_score": float(payload.fusion_score or 0.0),
++        "fsm_state": _extract_fsm_state(result),
++        "alerts": list(payload.alerts),
++        "classified_alerts": result.get("classified_alerts") or [],
++        "max_alert_level": result.get("max_alert_level"),
++        "camera_id": None,
++        "camera_name": "webui-camera",
++        "region": "webui",
++        "cheating_detected": True,
++        "confidence": float(payload.fusion_score or 0.0),
++        "source_mode": "webui",
++        "trigger_frame": trigger_frame.copy(),
++    }
++
++
++def _build_webui_hold_state(active: Dict[str, Any]) -> Dict[str, Any]:
++    """短暂掉帧时继续输出上一次稳定告警，避免 UI 立刻闪烁。"""
++    state = _empty_webui_event_state()
++    event_payload = active.get("event_payload", {})
++    state.update({
++        "event_holding": True,
++        "event_id": active.get("event_id"),
++        "cheating_detected": True,
++        "alerts": list(event_payload.get("alerts") or []),
++        "classified_alerts": _json_safe(event_payload.get("classified_alerts") or []),
++        "max_alert_level": _json_safe(event_payload.get("max_alert_level")),
++        "fusion_score": float(event_payload.get("fusion_score") or 0.0),
++    })
++    return state
++
++
++def _collect_recent_webui_exports(limit: int = 8) -> List[Dict[str, Any]]:
++    """读取最近导出的证据包列表。"""
++    if not file_manager:
++        return []
++    packages_dir = Path(file_manager.evidence_packages_dir)
++    if not packages_dir.exists():
++        return []
++
++    items: List[Dict[str, Any]] = []
++    package_files = sorted(packages_dir.glob("*.json"), key=lambda path: path.stat().st_mtime, reverse=True)
++    for path in package_files[: max(1, int(limit))]:
++        try:
++            data = json.loads(path.read_text(encoding="utf-8"))
++            alerts = data.get("alerts") or []
++            items.append({
++                "event_id": data.get("event_id") or data.get("evidence_id") or path.stem,
++                "timestamp": data.get("timestamp"),
++                "alerts": alerts,
++                "summary": " | ".join(str(item) for item in alerts[:3]),
++                "clip_path": data.get("clip_path"),
++                "raw_frames_dir": data.get("raw_frames_dir"),
++                "frame_manifest_path": data.get("frame_manifest_path"),
++                "screenshot_path": data.get("screenshot_path"),
++                "created_at": data.get("created_at"),
++            })
++        except Exception:
++            continue
++    return items
++
++
++def _finalize_webui_event(current_time: float) -> Dict[str, Any]:
++    """在后置窗口结束后导出 WebUI 证据视频。"""
++    global webui_active_event
++    if not file_manager or not webui_active_event:
++        return _empty_webui_event_state()
++
++    active = webui_active_event
++    samples = list(active.get("pre_frames", [])) + list(active.get("post_frames", []))
++    frames = [frame for _, frame in samples]
++    evidence_ref = None
++    if frames:
++        export_fps = _estimate_webui_export_fps(samples)
++        if logger:
++            logger.info(
++                f"WebUI事件导出: {active['event_id']} samples={len(samples)}, export_fps={export_fps:.2f}"
++            )
++        evidence_ref = file_manager.save_event_evidence_package(
++            event_id=active["event_id"],
++            timestamp=active["timestamp"],
++            frames=frames,
++            fps=export_fps,
++            event_payload=active["event_payload"],
++            source_mode="webui",
++            window_seconds={
++                "pre": webui_evidence_pre_seconds,
++                "post": max(0.0, current_time - float(active.get("trigger_time", current_time))),
++            },
++            frame_samples=samples,
++            export_clip=bool(webui_settings.get("export_event_video", True)),
++            export_raw_frames=bool(webui_settings.get("export_raw_frames", True)),
++        )
++        if evidence_ref:
++            file_manager.attach_evidence_to_event(active["timestamp"], evidence_ref)
++
++    result = _empty_webui_event_state()
++    result.update({
++        "event_finished": True,
++        "event_persisted": bool(evidence_ref),
++        "event_id": active["event_id"],
++        "event_clip_path": evidence_ref.get("clip_path") if evidence_ref else None,
++        "event_raw_frames_path": evidence_ref.get("raw_frames_dir") if evidence_ref else None,
++    })
++    webui_active_event = None
++    return result
++
++
++def _advance_webui_event_state(result: Dict[str, Any], payload: FrameUIResult, frame: np.ndarray, current_time: float) -> Dict[str, Any]:
++    """维护 WebUI 连续事件状态，避免重复刷盘并补齐证据视频。"""
++    global webui_active_event
++
++    state = _empty_webui_event_state()
++    if frame is None:
++        return state
++
++    _append_webui_frame(frame, current_time)
++
++    active = webui_active_event
++    if active is not None:
++        active["post_frames"].append((current_time, frame.copy()))
++
++    has_signal = bool(payload.cheating_detected and payload.alerts)
++    signature = " | ".join(sorted(str(alert) for alert in payload.alerts)) if has_signal else ""
++
++    if has_signal:
++        if active is None:
++            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
++            event_id = f"evt_{timestamp}"
++            saved_timestamp = file_manager.save_cheating_event(
++                timestamp=timestamp,
++                alerts=list(payload.alerts),
++                frame=frame,
++                cheating_detected=True,
++                confidence=float(payload.fusion_score or 0.0),
++                classified_alerts=result.get("classified_alerts") or [],
++                max_alert_level=result.get("max_alert_level"),
++                fusion_score=float(payload.fusion_score or 0.0),
++                fsm_state=_extract_fsm_state(result),
++                source_mode="webui",
++                event_id=event_id,
++            ) if file_manager else None
++            if saved_timestamp:
++                webui_active_event = {
++                    "event_id": event_id,
++                    "timestamp": timestamp,
++                    "signature": signature,
++                    "trigger_time": current_time,
++                    "hold_until": current_time + webui_alert_hold_seconds,
++                    "complete_after": current_time + webui_evidence_post_seconds,
++                    "pre_frames": _capture_webui_pre_frames(current_time),
++                    "post_frames": [],
++                    "event_payload": _build_webui_event_payload(result, payload, event_id, frame),
++                }
++                state["event_started"] = True
++                state["event_id"] = event_id
++            return state
++
++        active["complete_after"] = current_time + webui_evidence_post_seconds
++        active["hold_until"] = current_time + webui_alert_hold_seconds
++        if signature:
++            active["signature"] = signature
++        active["event_payload"]["alerts"] = list(payload.alerts)
++        active["event_payload"]["classified_alerts"] = result.get("classified_alerts") or []
++        active["event_payload"]["max_alert_level"] = result.get("max_alert_level")
++        active["event_payload"]["fusion_score"] = float(payload.fusion_score or 0.0)
++        active["event_payload"]["confidence"] = float(payload.fusion_score or 0.0)
++        active["event_payload"]["fsm_state"] = _extract_fsm_state(result)
++        return state
++
++    if active is not None and current_time < float(active.get("hold_until", current_time)):
++        return _build_webui_hold_state(active)
++
++    if active is not None and current_time >= float(active.get("complete_after", current_time)):
++        return _finalize_webui_event(current_time)
++    return state
++
++
++def _flush_webui_event(force: bool = False) -> Dict[str, Any]:
++    """在停止或关闭时强制导出未完成的 WebUI 事件。"""
++    if not webui_active_event:
++        return _empty_webui_event_state()
++    current_time = time.time()
++    if force:
++        return _finalize_webui_event(current_time)
++    if current_time >= float(webui_active_event.get("complete_after", current_time)):
++        return _finalize_webui_event(current_time)
++    return _empty_webui_event_state()
++
++# 初始化
++@app.on_event("startup")
++async def startup_event():
++    """启动时初始化"""
++    global detector, config, logger, file_manager
++    
++    try:
++        _setup_access_log_filter()
++        config = ConfigLoader("config/config.yaml")
++        
++        logging_config = config.get_section('logging')
++        logger = SystemLogger(
++            name="CheatingDetectionAPI",
++            log_dir=logging_config.get('log_dir', 'logs'),
++            log_level=logging_config.get('log_level', 'INFO'),
++            log_to_file=logging_config.get('log_to_file', True),
++            log_to_console=logging_config.get('log_to_console', True),
++            max_bytes=logging_config.get('max_bytes', 10485760),
++            backup_count=logging_config.get('backup_count', 5)
++        )
++        
++        detector = CheatingDetector(config)
++        file_manager = FileManager(config, detector, logger)
++        _init_webui_evidence_runtime()
++        logger.info("API服务启动成功")
++    except Exception as e:
++        print(f"初始化失败: {e}")
++        raise
++
++
++@app.on_event("shutdown")
++async def shutdown_event():
++    """关闭时清理"""
++    global detector
++    _flush_webui_event(force=True)
++    if detector:
++        detector.cleanup()
++        logger.info("API服务已关闭")
++
++
++# API端点
++@app.get("/")
++async def root():
++    """根路径"""
++    return {
++        "message": "监考作弊检测系统 API",
++        "version": __version__,
++        "docs": "/docs",
++        "status": "/api/status"
++    }
++
++
++@app.get("/api/status", response_model=StatusResponse)
++async def get_status():
++    """获取检测状态"""
++    global detection_status, detector
++    
++    status = detection_status.copy()
++    
++    if detector and detector.performance_monitor:
++        status["fps"] = detector.performance_monitor.get_avg_fps()
++    
++    return StatusResponse(**status)
++
++
++@app.post("/api/detect/image", response_model=DetectionResponse)
++async def detect_image(
++    file: UploadFile = File(...),
++    threshold: float = 0.6
++):
++    """
++    上传图片进行检测
++    - **file**: 图片文件
++    - **threshold**: 检测阈值(0-1)
++    """
++    global detector
++    
++    if not detector:
++        raise HTTPException(status_code=500, detail="检测器未初始化")
++    
++    try:
++        # 读取图片
++        contents = await file.read()
++        nparr = np.frombuffer(contents, np.uint8)
++        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
++        
++        if frame is None:
++            raise HTTPException(status_code=400, detail="无效的图片格式")
++        
++        # 执行检测
++        result = detector.analyze_frame(frame)
++        
++        # 构建响应
++        response = DetectionResponse(
++            cheating_detected=result['cheating_detected'],
++            alerts=result.get('alerts', []),
++            confidence=result.get('fusion_score', 0.0) if result.get('fusion_score', 0.0) > 0 else 0.5,
++            fusion_score=result.get('fusion_score'),
++            detection_time=result.get('detection_time', 0.0),
++            timestamp=datetime.now().isoformat()
++        )
++        
++        return response
++        
++    except Exception as e:
++        logger.error(f"图片检测失败: {e}", exc_info=True)
++        raise HTTPException(status_code=500, detail=f"检测失败: {str(e)}")
++
++
++@app.post("/api/detect/base64", response_model=DetectionResponse)
++async def detect_base64(request: DetectionRequest):
++    """
++    使用Base64编码的图片进行检测
++    - **image_base64**: Base64编码的图片字符串
++    - **threshold**: 检测阈值(0-1)
++    """
++    global detector
++    
++    if not detector:
++        raise HTTPException(status_code=500, detail="检测器未初始化")
++    
++    if not request.image_base64:
++        raise HTTPException(status_code=400, detail="缺少图片数据")
++    
++    try:
++        # 解码Base64图片
++        image_data = base64.b64decode(request.image_base64)
++        nparr = np.frombuffer(image_data, np.uint8)
++        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
++        
++        if frame is None:
++            raise HTTPException(status_code=400, detail="无效的图片格式")
++        
++        # 执行检测
++        result = detector.analyze_frame(frame)
++        
++        # 构建响应
++        response = DetectionResponse(
++            cheating_detected=result['cheating_detected'],
++            alerts=result.get('alerts', []),
++            confidence=result.get('fusion_score', 0.0) if result.get('fusion_score', 0.0) > 0 else 0.5,
++            fusion_score=result.get('fusion_score'),
++            detection_time=result.get('detection_time', 0.0),
++            timestamp=datetime.now().isoformat()
++        )
++        
++        return response
++        
++    except Exception as e:
++        logger.error(f"Base64图片检测失败: {e}", exc_info=True)
++        raise HTTPException(status_code=500, detail=f"检测失败: {str(e)}")
++
++
++@app.post("/api/start")
++async def start_detection():
++    """启动实时检测"""
++    global detector, detection_status
++    
++    if not detector:
++        raise HTTPException(status_code=500, detail="检测器未初始化")
++    
++    if detection_status["running"]:
++        raise HTTPException(status_code=400, detail="检测已在运行中")
++    
++    try:
++        detector.start_detection_thread()
++        detection_status["running"] = True
++        detection_status["started_at"] = datetime.now().isoformat()
++        detection_status["total_frames"] = 0
++        detection_status["detection_count"] = 0
++        
++        logger.info("实时检测已启动")
++        return {"message": "检测已启动", "status": "running"}
++        
++    except Exception as e:
++        logger.error(f"启动检测失败: {e}", exc_info=True)
++        raise HTTPException(status_code=500, detail=f"启动失败: {str(e)}")
++
++
++@app.post("/api/stop")
++async def stop_detection():
++    """停止实时检测"""
++    global detector, detection_status
++    
++    if not detector:
++        raise HTTPException(status_code=500, detail="检测器未初始化")
++    
++    if not detection_status["running"]:
++        raise HTTPException(status_code=400, detail="检测未在运行")
++    
++    try:
++        detector.stop_detection_thread()
++        detection_status["running"] = False
++        
++        logger.info("实时检测已停止")
++        return {"message": "检测已停止", "status": "stopped"}
++        
++    except Exception as e:
++        logger.error(f"停止检测失败: {e}", exc_info=True)
++        raise HTTPException(status_code=500, detail=f"停止失败: {str(e)}")
++
++
++@app.get("/api/results")
++async def get_results():
++    """获取最新的检测结果"""
++    global detector
++    
++    if not detector:
++        raise HTTPException(status_code=500, detail="检测器未初始化")
++    
++    if not detection_status["running"]:
++        raise HTTPException(status_code=400, detail="检测未在运行")
++    
++    try:
++        # 从结果队列获取最新结果
++        result = None
++        try:
++            result = detector.result_queue.get_nowait()
++        except queue.Empty:
++            return {"message": "暂无新结果"}
++        
++        # 转换为响应格式
++        response = {
++            "cheating_detected": result.get('cheating_detected', False),
++            "alerts": result.get('alerts', []),
++            "fusion_score": result.get('fusion_score', 0.0),
++            "fsm_results": result.get('fsm_results', {}),
++            "timestamp": datetime.now().isoformat()
++        }
++        
++        return response
++        
++    except Exception as e:
++        logger.error(f"获取结果失败: {e}", exc_info=True)
++        raise HTTPException(status_code=500, detail=f"获取结果失败: {str(e)}")
++
++
++@app.get("/api/statistics", response_model=StatisticsResponse)
++async def get_statistics():
++    """获取检测统计信息"""
++    global detector
++    
++    if not detector:
++        raise HTTPException(status_code=500, detail="检测器未初始化")
++    
++    try:
++        # 导出报告
++        report_file = detector.export_report()
++        
++        # 读取报告内容
++        with open(report_file, 'r', encoding='utf-8') as f:
++            report_data = json.load(f)
++        
++        return StatisticsResponse(**report_data)
++        
++    except Exception as e:
++        logger.error(f"获取统计信息失败: {e}", exc_info=True)
++        raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
++
++
++@app.get("/api/stream")
++async def stream_detection():
++    """实时检测流(Server-Sent Events)"""
++    global detector, detection_status
++    
++    if not detector:
++        raise HTTPException(status_code=500, detail="检测器未初始化")
++    
++    if not detection_status["running"]:
++        raise HTTPException(status_code=400, detail="检测未在运行")
++    
++    async def generate():
++        """生成SSE流"""
++        while detection_status["running"]:
++            try:
++                # 从结果队列获取结果
++                result = detector.result_queue.get(timeout=1.0)
++                
++                # 更新统计
++                detection_status["total_frames"] += 1
++                if result.get('cheating_detected'):
++                    detection_status["detection_count"] += 1
++                
++                # 构建SSE数据
++                data = {
++                    "cheating_detected": result.get('cheating_detected', False),
++                    "alerts": result.get('alerts', []),
++                    "fusion_score": result.get('fusion_score', 0.0),
++                    "fsm_results": result.get('fsm_results', {}),
++                    "timestamp": datetime.now().isoformat()
++                }
++                
++                yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
++                
++            except queue.Empty:
++                # 发送心跳
++                yield f"data: {json.dumps({'heartbeat': True}, ensure_ascii=False)}\n\n"
++            except Exception as e:
++                logger.error(f"流生成错误: {e}", exc_info=True)
++                break
++    
++    return StreamingResponse(
++        generate(),
++        media_type="text/event-stream",
++        headers={
++            "Cache-Control": "no-cache",
++            "Connection": "keep-alive",
++            "X-Accel-Buffering": "no"
++        }
++    )
++
++
++@app.get("/api/config")
++async def get_config():
++    """获取当前配置"""
++    global config
++    
++    if not config:
++        raise HTTPException(status_code=500, detail="配置未加载")
++    
++    try:
++        # 返回所有配置(排除敏感信息)
++        all_config = {}
++        sections = [
++            'models', 'detection_thresholds', 'camera', 'threading',
++            'alert', 'display', 'performance', 'decision_fusion', 'fsm_detection'
++        ]
++        
++        for section in sections:
++            all_config[section] = config.get_section(section)
++        
++        return all_config
++        
++    except Exception as e:
++        logger.error(f"获取配置失败: {e}", exc_info=True)
++        raise HTTPException(status_code=500, detail=f"获取配置失败: {str(e)}")
++
++
++@app.get("/webui")
++async def webui_home():
++    """WebUI 主页面。"""
++    index_path = STATIC_DIR / "index.html"
++    if not index_path.exists():
++        raise HTTPException(status_code=404, detail="WebUI 页面不存在")
++    return FileResponse(index_path)
++
++
++@app.post("/api/webui/start")
++async def start_webui_session(request: Optional[WebUIControlRequest] = None):
++    """启动 WebUI 会话（仅状态机，无摄像头占用）。"""
++    global webui_active_event
++    if not detector:
++        raise HTTPException(status_code=500, detail="检测器未初始化")
++
++    webui_status["running"] = True
++    webui_status["session_started_at"] = datetime.now().isoformat()
++    webui_status["session_total_frames"] = 0
++    webui_status["session_detection_count"] = 0
++    webui_status["last_inference_at"] = None
++    webui_evidence_buffer.clear()
++    webui_active_event = None
++    with webui_stream_lock:
++        webui_stream_buffer.clear()
++    if request is not None:
++        webui_settings["threshold"] = max(0.0, min(1.0, float(request.threshold)))
++    return {
++        "message": "WebUI 会话已启动",
++        "status": webui_status,
++        "threshold": float(webui_settings["threshold"]),
++    }
++
++
++@app.post("/api/webui/stop")
++async def stop_webui_session():
++    """停止 WebUI 会话。"""
++    flush_state = _flush_webui_event(force=True)
++    webui_status["running"] = False
++    return {"message": "WebUI 会话已停止", "status": webui_status, "flush_state": flush_state}
++
++
++@app.get("/api/webui/status")
++async def get_webui_status():
++    """获取 WebUI 会话状态。"""
++    return {"status": webui_status, "settings": webui_settings}
++
++
++@app.get("/api/webui/settings")
++async def get_webui_settings():
++    """获取 WebUI 参数配置。"""
++    return webui_settings
++
++
++@app.post("/api/webui/settings")
++async def update_webui_settings(request: WebUISettingsRequest):
++    """更新 WebUI 参数配置。"""
++    updates = request.model_dump(exclude_none=True)
++    if "threshold" in updates:
++        updates["threshold"] = max(0.0, min(1.0, float(updates["threshold"])))
++    if "infer_interval_ms" in updates:
++        updates["infer_interval_ms"] = max(50, min(1000, int(updates["infer_interval_ms"])))
++    if "jpeg_quality" in updates:
++        updates["jpeg_quality"] = max(0.3, min(1.0, float(updates["jpeg_quality"])))
++    if "preview_mode" in updates:
++        mode = str(updates["preview_mode"]).strip().lower()
++        updates["preview_mode"] = mode if mode in {"analysis", "live"} else "analysis"
++    webui_settings.update(updates)
++    return {"message": "WebUI 参数已更新", "settings": webui_settings}
++
++
++@app.get("/api/webui/exports")
++async def get_webui_exports(limit: int = 8):
++    """获取最近导出的证据列表。"""
++    safe_limit = max(1, min(20, int(limit)))
++    return {"items": _collect_recent_webui_exports(limit=safe_limit)}
++
++
++@app.post("/api/webui/infer", response_model=FrameUIResult)
++async def webui_infer(
++    file: UploadFile = File(...),
++    threshold: Optional[float] = None,
++):
++    """WebUI 单帧推理接口（前端上传视频帧）。"""
++    if not detector:
++        raise HTTPException(status_code=500, detail="检测器未初始化")
++
++    if not webui_status["running"]:
++        webui_status["running"] = True
++        if not webui_status["session_started_at"]:
++            webui_status["session_started_at"] = datetime.now().isoformat()
++
++    contents = await file.read()
++    nparr = np.frombuffer(contents, np.uint8)
++    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
++    if frame is None:
++        raise HTTPException(status_code=400, detail="无效图片帧")
++
++    result = detector.analyze_frame(frame)
++    frame_index = int(webui_status["session_total_frames"])
++    payload = _build_frame_ui_result(result, frame, frame_index)
++    effective_threshold = float(threshold) if threshold is not None else float(webui_settings["threshold"])
++    payload = _apply_threshold(payload, effective_threshold)
++    event_state = _advance_webui_event_state(result, payload, frame.copy(), time.time())
++    if event_state.get("event_started") or event_state.get("event_finished") or event_state.get("event_persisted"):
++        payload = payload.model_copy(update=event_state)
++    elif event_state.get("event_id"):
++        payload = payload.model_copy(update={"event_id": event_state.get("event_id")})
++
++    webui_status["session_total_frames"] += 1
++    if payload.cheating_detected:
++        webui_status["session_detection_count"] += 1
++    webui_status["last_inference_at"] = payload.timestamp
++
++    with webui_stream_lock:
++        webui_stream_buffer.append(payload.model_dump())
++
++    return payload
++
++
++@app.get("/api/webui/stream")
++async def webui_stream():
++    """WebUI SSE 结果流。"""
++
++    async def generate():
++        last_frame_index = -1
++        while True:
++            if not webui_status["running"]:
++                await asyncio.sleep(0.5)
++                yield f"data: {json.dumps({'type': 'heartbeat', 'running': False}, ensure_ascii=False)}\n\n"
++                continue
++
++            item = None
++            with webui_stream_lock:
++                if webui_stream_buffer:
++                    latest = webui_stream_buffer[-1]
++                    latest_idx = int(latest.get("frame_index", -1))
++                    if latest_idx > last_frame_index:
++                        item = latest
++                        last_frame_index = latest_idx
++
++            if item is not None:
++                yield f"data: {json.dumps({'type': 'frame_result', 'payload': item}, ensure_ascii=False)}\n\n"
++            else:
++                await asyncio.sleep(0.15)
++                yield f"data: {json.dumps({'type': 'heartbeat', 'running': True}, ensure_ascii=False)}\n\n"
++
++    return StreamingResponse(
++        generate(),
++        media_type="text/event-stream",
++        headers={
++            "Cache-Control": "no-cache",
++            "Connection": "keep-alive",
++            "X-Accel-Buffering": "no",
++        },
++    )
++
++
++if __name__ == "__main__":
++    import uvicorn
++    uvicorn.run(app, host="0.0.0.0", port=8000)
++
+diff --git a/api/static/app.js b/api/static/app.js
+new file mode 100644
+index 0000000..9220ce8
+--- /dev/null
++++ b/api/static/app.js
+@@ -0,0 +1,1177 @@
++const videoEl = document.getElementById("camera");
++const frameCanvasEl = document.getElementById("frameLayer");
++const canvasEl = document.getElementById("overlay");
++const stageShellEl = document.querySelector(".stage-shell");
++const stageEl = document.querySelector(".stage");
++const statusBadge = document.getElementById("statusBadge");
++const startBtn = document.getElementById("startBtn");
++const stopBtn = document.getElementById("stopBtn");
++const metricFrames = document.getElementById("metricFrames");
++const metricDetections = document.getElementById("metricDetections");
++const metricFps = document.getElementById("metricFps");
++const metricLatency = document.getElementById("metricLatency");
++const cameraResolution = document.getElementById("cameraResolution");
++const cameraRatio = document.getElementById("cameraRatio");
++const stageResolution = document.getElementById("stageResolution");
++const stageRatio = document.getElementById("stageRatio");
++const alertsList = document.getElementById("alertsList");
++const historyList = document.getElementById("historyList");
++const exportsList = document.getElementById("exportsList");
++const thresholdInput = document.getElementById("thresholdInput");
++const thresholdValue = document.getElementById("thresholdValue");
++const inferIntervalInput = document.getElementById("inferIntervalInput");
++const inferIntervalValue = document.getElementById("inferIntervalValue");
++const jpegQualityInput = document.getElementById("jpegQualityInput");
++const jpegQualityValue = document.getElementById("jpegQualityValue");
++const previewModeInput = document.getElementById("previewModeInput");
++const drawSkeletonInput = document.getElementById("drawSkeletonInput");
++const drawPersonBboxInput = document.getElementById("drawPersonBboxInput");
++const drawRegionsInput = document.getElementById("drawRegionsInput");
++const drawPointIndexInput = document.getElementById("drawPointIndexInput");
++const headOnlyPoseInput = document.getElementById("headOnlyPoseInput");
++const drawPoseLabelInput = document.getElementById("drawPoseLabelInput");
++const exportEventVideoInput = document.getElementById("exportEventVideoInput");
++const exportRawFramesInput = document.getElementById("exportRawFramesInput");
++const saveParamsBtn = document.getElementById("saveParamsBtn");
++
++let running = false;
++let stream = null;
++let captureTimer = null;
++let latestPayload = null;
++let latestFrameBitmap = null;
++let frameCounter = 0;
++let detectionCounter = 0;
++let lastTick = performance.now();
++let cameraTrack = null;
++let cameraInfoPollTimer = null;
++let inferInFlight = false;
++let latestRequestId = 0;
++let historyMessages = [];
++let lastCheatingDetected = false;
++let historyMessageTimes = new Map();
++let lastAlertSignature = "";
++let recentExports = [];
++let expandedExportIds = new Set();
++let exportManifestCache = new Map();
++let settings = {
++  threshold: 0.6,
++  infer_interval_ms: 120,
++  jpeg_quality: 0.8,
++  draw_skeleton: true,
++  draw_person_bbox: true,
++  draw_suspicious_regions: true,
++  draw_point_index: false,
++  head_only_pose: false,
++  draw_pose_label: true,
++  preview_mode: "analysis",
++  export_event_video: true,
++  export_raw_frames: true,
++};
++
++const HEAD_ONLY_INDICES_17 = new Set([0, 1, 2, 3, 4, 5, 6]);
++const HEAD_ONLY_INDICES_33 = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
++
++function formatRatio(width, height) {
++  if (!width || !height) {
++    return "-";
++  }
++  const value = width / Math.max(1, height);
++  return `${value.toFixed(3)} (${width}:${height})`;
++}
++
++function updateCameraInfo() {
++  const trackSettings = cameraTrack && typeof cameraTrack.getSettings === "function"
++    ? cameraTrack.getSettings()
++    : {};
++  const trackW = Number(trackSettings.width || 0);
++  const trackH = Number(trackSettings.height || 0);
++  const vw = videoEl.videoWidth || trackW || 0;
++  const vh = videoEl.videoHeight || trackH || 0;
++  cameraResolution.textContent = vw && vh ? `${vw}x${vh}` : "-";
++  cameraRatio.textContent = formatRatio(vw, vh);
++
++  const sw = Math.round(stageEl?.clientWidth || 0);
++  const sh = Math.round(stageEl?.clientHeight || 0);
++  stageResolution.textContent = sw && sh ? `${sw}x${sh}` : "-";
++  stageRatio.textContent = formatRatio(sw, sh);
++}
++
++function updateCameraInfoFromPayload(payload) {
++  const fw = Number(payload?.frame_size?.width || 0);
++  const fh = Number(payload?.frame_size?.height || 0);
++  if (fw > 0 && fh > 0) {
++    cameraResolution.textContent = `${fw}x${fh}`;
++    cameraRatio.textContent = formatRatio(fw, fh);
++  }
++
++  const sw = Math.round(stageEl?.clientWidth || canvasEl?.width || 0);
++  const sh = Math.round(stageEl?.clientHeight || canvasEl?.height || 0);
++  if (sw > 0 && sh > 0) {
++    stageResolution.textContent = `${sw}x${sh}`;
++    stageRatio.textContent = formatRatio(sw, sh);
++  }
++}
++
++function applyPreviewMode() {
++  const mode = String(settings.preview_mode || "analysis");
++  if (mode === "live") {
++    videoEl.style.opacity = "1";
++    frameCanvasEl.style.opacity = "0";
++  } else {
++    videoEl.style.opacity = running ? "0" : "1";
++    frameCanvasEl.style.opacity = running ? "1" : "0";
++  }
++}
++
++function refreshStageAndInfo() {
++  syncStageSize();
++  resizeOverlay();
++  updateCameraInfo();
++  if (latestPayload) {
++    drawPayload(latestPayload);
++  }
++}
++
++function startCameraInfoPolling() {
++  if (cameraInfoPollTimer) {
++    window.clearInterval(cameraInfoPollTimer);
++  }
++  cameraInfoPollTimer = window.setInterval(() => {
++    refreshStageAndInfo();
++    if ((videoEl.videoWidth && videoEl.videoHeight) || (cameraTrack && cameraTrack.readyState === "live")) {
++      const sw = Math.round(stageEl?.clientWidth || 0);
++      const sh = Math.round(stageEl?.clientHeight || 0);
++      if (sw > 0 && sh > 0) {
++        window.clearInterval(cameraInfoPollTimer);
++        cameraInfoPollTimer = null;
++      }
++    }
++  }, 300);
++}
++
++// MediaPipe Pose (33点) 常用连接拓扑
++const POSE_EDGES_33 = [
++  [0, 1], [1, 2], [2, 3], [3, 7],
++  [0, 4], [4, 5], [5, 6], [6, 8],
++  [9, 10],
++  [11, 12],
++  [11, 13], [13, 15], [15, 17], [15, 19], [15, 21],
++  [12, 14], [14, 16], [16, 18], [16, 20], [16, 22],
++  [11, 23], [12, 24], [23, 24],
++  [23, 25], [25, 27], [27, 29], [29, 31],
++  [24, 26], [26, 28], [28, 30], [30, 32],
++];
++
++// COCO/YOLO Pose (17点) 常用连接拓扑
++const POSE_EDGES_17 = [
++  [0, 1], [0, 2], [1, 3], [2, 4],
++  [5, 6],
++  [5, 7], [7, 9],
++  [6, 8], [8, 10],
++  [5, 11], [6, 12], [11, 12],
++  [11, 13], [13, 15],
++  [12, 14], [14, 16],
++];
++
++function setBadge(text, mode) {
++  statusBadge.textContent = text;
++  statusBadge.classList.remove("idle", "active", "alert");
++  statusBadge.classList.add(mode);
++}
++
++function renderAlerts(alerts = []) {
++  alertsList.innerHTML = "";
++  if (!alerts.length) {
++    const li = document.createElement("li");
++    li.className = "empty";
++    li.textContent = "暂无告警";
++    alertsList.appendChild(li);
++    return;
++  }
++  alerts.slice(0, 8).forEach((text) => {
++    const li = document.createElement("li");
++    li.textContent = text;
++    alertsList.appendChild(li);
++  });
++}
++
++function pushHistoryMessage(text, options = {}) {
++  const message = String(text || "").trim();
++  if (!message) {
++    return;
++  }
++  const cooldownMs = Number(options.cooldownMs || 0);
++  const now = Date.now();
++  const lastTime = Number(historyMessageTimes.get(message) || 0);
++  if (cooldownMs > 0 && now - lastTime < cooldownMs) {
++    return;
++  }
++  const last = historyMessages[0];
++  if (last && last.text === message) {
++    return;
++  }
++  historyMessages.unshift({
++    text: message,
++    time: new Date().toLocaleTimeString("zh-CN", { hour12: false }),
++  });
++  historyMessageTimes.set(message, now);
++  historyMessages = historyMessages.slice(0, 80);
++  renderHistory();
++}
++
++function renderHistory() {
++  historyList.innerHTML = "";
++  if (!historyMessages.length) {
++    const li = document.createElement("li");
++    li.className = "empty";
++    li.textContent = "暂无历史消息";
++    historyList.appendChild(li);
++    return;
++  }
++
++  historyMessages.forEach((item) => {
++    const li = document.createElement("li");
++    const time = document.createElement("span");
++    const text = document.createElement("span");
++    time.className = "history-time";
++    time.textContent = `[${item.time}]`;
++    text.textContent = item.text;
++    li.appendChild(time);
++    li.appendChild(text);
++    historyList.appendChild(li);
++  });
++}
++
++function normalizeOutputPath(path) {
++  return String(path || "").trim().replace(/\\/g, "/");
++}
++
++function getExportId(item) {
++  return String(item?.event_id || item?.timestamp || "");
++}
++
++function toOutputUrl(path) {
++  const normalized = normalizeOutputPath(path);
++  if (!normalized) {
++    return null;
++  }
++  if (normalized.startsWith("outputs/")) {
++    return `/webui/${normalized}`;
++  }
++  return null;
++}
++
++async function ensureExportManifest(item) {
++  const manifestPath = normalizeOutputPath(item?.frame_manifest_path);
++  if (!manifestPath || exportManifestCache.has(manifestPath)) {
++    return;
++  }
++  const manifestUrl = toOutputUrl(manifestPath);
++  if (!manifestUrl) {
++    return;
++  }
++  try {
++    const response = await fetch(manifestUrl);
++    if (!response.ok) {
++      throw new Error(await response.text());
++    }
++    const data = await response.json();
++    exportManifestCache.set(manifestPath, data);
++  } catch (err) {
++    console.error(err);
++    exportManifestCache.set(manifestPath, { error: "清单加载失败" });
++  }
++}
++
++async function toggleExportDetails(item) {
++  const exportId = getExportId(item);
++  if (!exportId) {
++    return;
++  }
++  if (expandedExportIds.has(exportId)) {
++    expandedExportIds.delete(exportId);
++    renderExports();
++    return;
++  }
++  expandedExportIds.add(exportId);
++  renderExports();
++  await ensureExportManifest(item);
++  renderExports();
++}
++
++function createExportLink(label, path, options = {}) {
++  const url = toOutputUrl(path);
++  if (!url) {
++    return null;
++  }
++  const anchor = document.createElement("a");
++  anchor.className = "export-link";
++  anchor.href = url;
++  if (options.download) {
++    const normalized = normalizeOutputPath(path);
++    anchor.download = normalized.split("/").pop() || "";
++  } else {
++    anchor.target = "_blank";
++    anchor.rel = "noreferrer";
++  }
++  anchor.textContent = label;
++  return anchor;
++}
++
++function renderExports() {
++  exportsList.innerHTML = "";
++  if (!recentExports.length) {
++    const li = document.createElement("li");
++    li.className = "empty";
++    li.textContent = "暂无导出证据";
++    exportsList.appendChild(li);
++    return;
++  }
++
++  recentExports.forEach((item) => {
++    const exportId = getExportId(item);
++    const expanded = expandedExportIds.has(exportId);
++    const li = document.createElement("li");
++    li.className = "export-item";
++
++    const header = document.createElement("button");
++    header.type = "button";
++    header.className = "export-toggle";
++    header.addEventListener("click", () => {
++      toggleExportDetails(item).catch((err) => console.error(err));
++    });
++
++    const caret = document.createElement("span");
++    caret.className = "export-caret";
++    caret.textContent = expanded ? "▾" : "▸";
++
++    const title = document.createElement("span");
++    title.className = "export-title";
++    title.textContent = `${item.event_id || "未知事件"} ${item.timestamp ? `@ ${item.timestamp}` : ""}`;
++
++    const summary = document.createElement("div");
++    summary.className = "export-meta";
++    summary.textContent = item.summary || "无告警摘要";
++
++    header.appendChild(caret);
++    header.appendChild(title);
++    li.appendChild(header);
++    li.appendChild(summary);
++
++    if (expanded) {
++      const details = document.createElement("div");
++      details.className = "export-details";
++
++      const linkRow = document.createElement("div");
++      linkRow.className = "export-links";
++      const baseLinks = [
++        createExportLink("下载视频", item.clip_path, { download: true }),
++        createExportLink("打开截图", item.screenshot_path),
++        createExportLink("打开清单", item.frame_manifest_path),
++      ].filter(Boolean);
++      baseLinks.forEach((link) => linkRow.appendChild(link));
++      if (baseLinks.length) {
++        details.appendChild(linkRow);
++      }
++
++      const rawMeta = [];
++      if (item.raw_frames_dir) {
++        rawMeta.push(`原始帧目录: ${item.raw_frames_dir}`);
++      }
++      if (item.frame_manifest_path) {
++        rawMeta.push(`清单路径: ${item.frame_manifest_path}`);
++      }
++      if (rawMeta.length) {
++        const meta = document.createElement("div");
++        meta.className = "export-meta";
++        meta.textContent = rawMeta.join(" | ");
++        details.appendChild(meta);
++      }
++
++      const manifestPath = normalizeOutputPath(item.frame_manifest_path);
++      const manifest = manifestPath ? exportManifestCache.get(manifestPath) : null;
++      if (manifest?.error) {
++        const error = document.createElement("div");
++        error.className = "export-meta";
++        error.textContent = manifest.error;
++        details.appendChild(error);
++      } else if (manifest && Array.isArray(manifest.frames) && manifest.frames.length) {
++        const frameLinks = document.createElement("div");
++        frameLinks.className = "export-frame-links";
++        manifest.frames.slice(0, 12).forEach((frame) => {
++          const link = createExportLink(`帧 ${frame.index}`, frame.file);
++          if (link) {
++            frameLinks.appendChild(link);
++          }
++        });
++        details.appendChild(frameLinks);
++
++        if (manifest.frames.length > 12) {
++          const tip = document.createElement("div");
++          tip.className = "export-meta";
++          tip.textContent = `已显示前 12 帧，共 ${manifest.frames.length} 帧，可通过“打开清单”查看全部。`;
++          details.appendChild(tip);
++        }
++      } else if (manifestPath) {
++        const loading = document.createElement("div");
++        loading.className = "export-meta";
++        loading.textContent = "正在加载清单...";
++        details.appendChild(loading);
++      }
++
++      li.appendChild(details);
++    }
++    exportsList.appendChild(li);
++  });
++}
++
++function syncSettingsToControls() {
++  thresholdInput.value = String(settings.threshold);
++  thresholdValue.textContent = Number(settings.threshold).toFixed(2);
++  inferIntervalInput.value = String(settings.infer_interval_ms);
++  inferIntervalValue.textContent = String(settings.infer_interval_ms);
++  jpegQualityInput.value = String(settings.jpeg_quality);
++  jpegQualityValue.textContent = Number(settings.jpeg_quality).toFixed(2);
++  previewModeInput.value = String(settings.preview_mode || "analysis");
++  drawSkeletonInput.checked = Boolean(settings.draw_skeleton);
++  drawPersonBboxInput.checked = Boolean(settings.draw_person_bbox);
++  drawRegionsInput.checked = Boolean(settings.draw_suspicious_regions);
++  drawPointIndexInput.checked = Boolean(settings.draw_point_index);
++  headOnlyPoseInput.checked = Boolean(settings.head_only_pose);
++  drawPoseLabelInput.checked = Boolean(settings.draw_pose_label);
++  exportEventVideoInput.checked = Boolean(settings.export_event_video);
++  exportRawFramesInput.checked = Boolean(settings.export_raw_frames);
++}
++
++function drawPayload(payload) {
++  latestPayload = payload;
++  drawFrameSnapshot();
++  const ctx = canvasEl.getContext("2d");
++  const w = canvasEl.width;
++  const h = canvasEl.height;
++  ctx.clearRect(0, 0, w, h);
++
++  const srcW = payload.frame_size?.width || w;
++  const srcH = payload.frame_size?.height || h;
++  const transform = getContainTransform(w, h, srcW, srcH);
++
++  if (settings.draw_person_bbox) {
++    const bboxes = payload.person_bboxes || [];
++    ctx.strokeStyle = "#26d07c";
++    ctx.lineWidth = 2;
++    bboxes.forEach((bbox, idx) => {
++      const [x1, y1, x2, y2] = bbox;
++      const [cx1, cy1] = toCanvasPoint(x1, y1, srcW, srcH, transform, false);
++      const [cx2, cy2] = toCanvasPoint(x2, y2, srcW, srcH, transform, false);
++      const bw = cx2 - cx1;
++      const bh = cy2 - cy1;
++      if (bw <= 1 || bh <= 1) {
++        return;
++      }
++      ctx.strokeRect(cx1, cy1, bw, bh);
++      ctx.fillStyle = "rgba(38, 208, 124, 0.85)";
++      ctx.fillRect(cx1, cy1 - 20, 72, 18);
++      ctx.fillStyle = "#08150f";
++      ctx.font = "12px sans-serif";
++      ctx.fillText(`P${idx}`, cx1 + 5, cy1 - 7);
++    });
++  }
++
++  if (settings.draw_suspicious_regions) {
++    const regions = payload.suspicious_regions || [];
++    regions.forEach((item) => {
++      const [x1, y1, x2, y2] = item.bbox;
++      ctx.strokeStyle = "#ff8a65";
++      ctx.lineWidth = 2;
++      const [cx1, cy1] = toCanvasPoint(x1, y1, srcW, srcH, transform, false);
++      const [cx2, cy2] = toCanvasPoint(x2, y2, srcW, srcH, transform, false);
++      const bw = cx2 - cx1;
++      const bh = cy2 - cy1;
++      if (bw <= 1 || bh <= 1) {
++        return;
++      }
++      ctx.strokeRect(cx1, cy1, bw, bh);
++      ctx.fillStyle = "rgba(255, 138, 101, 0.92)";
++      const label = `${item.type} ${(item.confidence || 0).toFixed(2)}`;
++      ctx.fillRect(cx1, cy1 - 20, Math.max(112, label.length * 7), 18);
++      ctx.fillStyle = "#180f0d";
++      ctx.fillText(label, cx1 + 4, cy1 - 7);
++    });
++  }
++
++  if (settings.draw_skeleton) {
++    const poses = Array.isArray(payload.pose_people) && payload.pose_people.length
++      ? payload.pose_people
++      : buildFallbackPosePeople(payload);
++    ctx.fillStyle = "#38b8ff";
++    ctx.strokeStyle = "rgba(56, 184, 255, 0.85)";
++    ctx.lineWidth = 2;
++    poses.forEach((person) => {
++      const points = extractPosePoints(person);
++      if (!points.length) {
++        return;
++      }
++      const personLabel = resolvePersonLabel(person);
++      const coordinateSpace = resolveCoordinateSpace(person, points);
++      const poseEdges = resolvePoseEdges(points.length);
++      const visibleIndexSet = resolveVisibleIndexSet(points.length);
++
++      // 按标准骨架拓扑连线，避免“全点顺序乱连”
++      poseEdges.forEach(([a, b]) => {
++        const pa = points[a];
++        const pb = points[b];
++        if (!visibleIndexSet.has(a) || !visibleIndexSet.has(b)) {
++          return;
++        }
++        if (!isRenderablePoint(pa) || !isRenderablePoint(pb)) {
++          return;
++        }
++        const [ax, ay] = toCanvasPoint(pa.x, pa.y, srcW, srcH, transform, coordinateSpace);
++        const [bx, by] = toCanvasPoint(pb.x, pb.y, srcW, srcH, transform, coordinateSpace);
++        if (!Number.isFinite(ax) || !Number.isFinite(ay) || !Number.isFinite(bx) || !Number.isFinite(by)) {
++          return;
++        }
++        ctx.beginPath();
++        ctx.moveTo(ax, ay);
++        ctx.lineTo(bx, by);
++        ctx.stroke();
++      });
++
++      points.forEach((pt, index) => {
++        if (!visibleIndexSet.has(index)) {
++          return;
++        }
++        if (!isRenderablePoint(pt)) {
++          return;
++        }
++        const [cx, cy] = toCanvasPoint(pt.x, pt.y, srcW, srcH, transform, coordinateSpace);
++        if (!Number.isFinite(cx) || !Number.isFinite(cy)) {
++          return;
++        }
++        ctx.beginPath();
++        ctx.arc(cx, cy, 2.6, 0, 2 * Math.PI);
++        ctx.fill();
++
++        if (settings.draw_point_index) {
++          ctx.fillStyle = "#ffffff";
++          ctx.font = "11px monospace";
++          ctx.fillText(String(index), cx + 4, cy - 4);
++          ctx.fillStyle = "#38b8ff";
++        }
++      });
++
++      if (settings.draw_pose_label) {
++        const anchor = findPoseAnchor(points, visibleIndexSet);
++        if (anchor) {
++          const [lx, ly] = toCanvasPoint(anchor.x, anchor.y, srcW, srcH, transform, coordinateSpace);
++          ctx.fillStyle = "rgba(8, 21, 15, 0.92)";
++          ctx.fillRect(lx + 8, ly - 18, 34, 16);
++          ctx.fillStyle = "#7cf5c8";
++          ctx.font = "11px monospace";
++          ctx.fillText(personLabel, lx + 12, ly - 6);
++          ctx.fillStyle = "#38b8ff";
++        }
++      }
++    });
++  }
++
++  renderAlerts(payload.alerts || []);
++  const alertSignature = (payload.alerts || []).join(" | ");
++  if (payload.event_started) {
++    const startedEventId = String(payload.event_id || "").trim();
++    pushHistoryMessage(
++      startedEventId
++        ? `检测作弊事件开始: ${startedEventId}`
++        : "检测作弊事件开始",
++    );
++  }
++  if (payload.event_finished || (!payload.cheating_detected && lastCheatingDetected)) {
++    pushHistoryMessage("检测作弊事件结束");
++  }
++  if (alertSignature && alertSignature !== lastAlertSignature) {
++    pushHistoryMessage(`告警记录: ${alertSignature}`, { cooldownMs: 4000 });
++  }
++  if (payload.event_persisted) {
++    const persistedEventId = String(payload.event_id || "").trim();
++    pushHistoryMessage(
++      persistedEventId
++        ? `作弊事件记录已保存: ${persistedEventId}`
++        : "作弊事件记录已保存",
++    );
++    if (payload.event_clip_path) {
++      pushHistoryMessage(`事件视频已导出: ${payload.event_clip_path}`);
++    }
++    if (payload.event_raw_frames_path) {
++      pushHistoryMessage(`事件原始帧已导出: ${payload.event_raw_frames_path}`);
++    }
++    loadRecentExports().catch((err) => console.error(err));
++  }
++  lastCheatingDetected = Boolean(payload.cheating_detected);
++  lastAlertSignature = alertSignature;
++
++  if (payload.cheating_detected) {
++    setBadge("检测到可疑行为", "alert");
++  } else if (running) {
++    setBadge("检测进行中", "active");
++  }
++}
++
++function extractPosePoints(person) {
++  // 兼容格式:
++  // 1) [[x,y,...], ...]
++  // 2) [{x,y,...}, ...]
++  // 3) {keypoints:[...]} / {landmarks:[...]}
++  // 4) {0:[x,y],1:[x,y],...}
++  let raw = person;
++  if (person && typeof person === "object" && !Array.isArray(person)) {
++    if (Array.isArray(person.keypoints)) {
++      raw = person.keypoints;
++    } else if (Array.isArray(person.landmark)) {
++      raw = person.landmark;
++    } else if (Array.isArray(person.landmarks)) {
++      raw = person.landmarks;
++    } else {
++      raw = Object.values(person);
++    }
++  }
++  if (!Array.isArray(raw)) {
++    return [];
++  }
++
++  const points = [];
++  raw.forEach((p) => {
++    if (Array.isArray(p) && p.length >= 2) {
++      const x = Number(p[0]);
++      const y = Number(p[1]);
++      if (Number.isFinite(x) && Number.isFinite(y)) {
++        const score2 = Number(p[2]);
++        const score3 = Number(p[3]);
++        points.push({
++          x,
++          y,
++          visibility: Number.isFinite(score2) ? score2 : (Number.isFinite(score3) ? score3 : null),
++        });
++      }
++      return;
++    }
++    if (p && typeof p === "object") {
++      const x = Number(p.x);
++      const y = Number(p.y);
++      if (Number.isFinite(x) && Number.isFinite(y)) {
++        points.push({
++          x,
++          y,
++          visibility: Number.isFinite(Number(p.visibility)) ? Number(p.visibility) : null,
++          index: Number.isFinite(Number(p.index)) ? Number(p.index) : null,
++        });
++      }
++    }
++  });
++  return points;
++}
++
++function buildFallbackPosePeople(payload) {
++  const poses = payload.pose_landmarks || [];
++  const bboxes = payload.person_bboxes || [];
++  return poses.map((pose, index) => ({
++    keypoints: pose,
++    bbox: bboxes[index] || null,
++    coordinate_space: "frame_pixels",
++  }));
++}
++
++function resolvePoseEdges(pointCount) {
++  if (pointCount >= 33) {
++    return POSE_EDGES_33;
++  }
++  if (pointCount >= 17) {
++    return POSE_EDGES_17;
++  }
++  return [];
++}
++
++function resolveVisibleIndexSet(pointCount) {
++  if (!settings.head_only_pose) {
++    return new Set(Array.from({ length: pointCount }, (_, i) => i));
++  }
++  if (pointCount >= 33) {
++    return HEAD_ONLY_INDICES_33;
++  }
++  if (pointCount >= 17) {
++    return HEAD_ONLY_INDICES_17;
++  }
++  return new Set();
++}
++
++function resolvePersonLabel(person) {
++  if (person && Number.isFinite(Number(person.person_index))) {
++    return `P${Number(person.person_index)}`;
++  }
++  return "P?";
++}
++
++function findPoseAnchor(points, visibleIndexSet) {
++  for (let index = 0; index < points.length; index += 1) {
++    const pt = points[index];
++    if (!visibleIndexSet.has(index)) {
++      continue;
++    }
++    if (isRenderablePoint(pt)) {
++      return pt;
++    }
++  }
++  return null;
++}
++
++function resolveCoordinateSpace(person, points) {
++  if (person && typeof person === "object" && person.coordinate_space) {
++    return String(person.coordinate_space);
++  }
++  return isNormalizedPose(points) ? "frame_normalized" : "frame_pixels";
++}
++
++function isNormalizedPose(points) {
++  if (!points.length) {
++    return false;
++  }
++  let inRange = 0;
++  points.forEach((p) => {
++    if (p && Number.isFinite(p.x) && Number.isFinite(p.y) && p.x >= 0 && p.x <= 1.2 && p.y >= 0 && p.y <= 1.2) {
++      inRange += 1;
++    }
++  });
++  return inRange / points.length >= 0.8;
++}
++
++function isRenderablePoint(pt) {
++  if (!pt || !Number.isFinite(pt.x) || !Number.isFinite(pt.y)) {
++    return false;
++  }
++  if (pt.visibility !== null && pt.visibility !== undefined && pt.visibility < 0.35) {
++    return false;
++  }
++  // MediaPipe 无效点常见为 (0,0)
++  if (Math.abs(pt.x) < 1e-6 && Math.abs(pt.y) < 1e-6) {
++    return false;
++  }
++  return true;
++}
++
++function getContainTransform(canvasW, canvasH, srcW, srcH) {
++  const scale = Math.min(canvasW / Math.max(1, srcW), canvasH / Math.max(1, srcH));
++  const drawW = srcW * scale;
++  const drawH = srcH * scale;
++  const offsetX = (canvasW - drawW) / 2;
++  const offsetY = (canvasH - drawH) / 2;
++  return { scale, offsetX, offsetY };
++}
++
++function toCanvasPoint(x, y, srcW, srcH, transform, coordinateSpace) {
++  const normalized = coordinateSpace === "frame_normalized";
++  const px = normalized ? x * srcW : x;
++  const py = normalized ? y * srcH : y;
++  return [
++    transform.offsetX + px * transform.scale,
++    transform.offsetY + py * transform.scale,
++  ];
++}
++
++function drawFrameSnapshot() {
++  const ctx = frameCanvasEl.getContext("2d");
++  const w = frameCanvasEl.width;
++  const h = frameCanvasEl.height;
++  ctx.clearRect(0, 0, w, h);
++
++  if (!latestFrameBitmap) {
++    return;
++  }
++
++  const srcW = latestFrameBitmap.width || w;
++  const srcH = latestFrameBitmap.height || h;
++  const transform = getContainTransform(w, h, srcW, srcH);
++  ctx.drawImage(
++    latestFrameBitmap,
++    0,
++    0,
++    srcW,
++    srcH,
++    transform.offsetX,
++    transform.offsetY,
++    srcW * transform.scale,
++    srcH * transform.scale,
++  );
++}
++
++async function sendFrameForInfer() {
++  if (!running || !videoEl.videoWidth || !videoEl.videoHeight || inferInFlight) {
++    return;
++  }
++  inferInFlight = true;
++  try {
++    const requestId = ++latestRequestId;
++    const temp = document.createElement("canvas");
++    temp.width = videoEl.videoWidth;
++    temp.height = videoEl.videoHeight;
++    temp.getContext("2d").drawImage(videoEl, 0, 0, temp.width, temp.height);
++
++    const blob = await new Promise((resolve) =>
++      temp.toBlob(resolve, "image/jpeg", Number(settings.jpeg_quality || 0.8))
++    );
++    if (!blob) {
++      return;
++    }
++
++    const formData = new FormData();
++    formData.append("file", blob, "frame.jpg");
++
++    const response = await fetch(`/api/webui/infer?threshold=${encodeURIComponent(settings.threshold)}`, {
++      method: "POST",
++      body: formData,
++    });
++    if (!response.ok) {
++      throw new Error(await response.text());
++    }
++    const payload = await response.json();
++    if (requestId !== latestRequestId) {
++      return;
++    }
++
++    latestFrameBitmap = typeof createImageBitmap === "function" ? await createImageBitmap(temp) : temp;
++    updateCameraInfoFromPayload(payload);
++    frameCounter += 1;
++    if (payload.cheating_detected) {
++      detectionCounter += 1;
++    }
++    metricFrames.textContent = String(frameCounter);
++    metricDetections.textContent = String(detectionCounter);
++    metricLatency.textContent = Number(payload.detection_time || 0).toFixed(2);
++
++    const now = performance.now();
++    const dt = Math.max(1, now - lastTick);
++    lastTick = now;
++    metricFps.textContent = (1000 / dt).toFixed(1);
++
++    drawPayload(payload);
++  } finally {
++    inferInFlight = false;
++  }
++}
++
++function startCaptureLoop() {
++  if (captureTimer) {
++    window.clearInterval(captureTimer);
++  }
++  const interval = Math.max(50, Number(settings.infer_interval_ms || 120));
++  captureTimer = window.setInterval(() => {
++    sendFrameForInfer().catch((err) => {
++      console.error(err);
++      setBadge("推理请求失败", "alert");
++    });
++  }, interval);
++}
++
++function stopCaptureLoop() {
++  if (captureTimer) {
++    window.clearInterval(captureTimer);
++    captureTimer = null;
++  }
++}
++
++function connectSSE() {
++  if (stream) {
++    stream.close();
++  }
++  stream = new EventSource("/api/webui/stream");
++  stream.onmessage = (event) => {
++    try {
++      const data = JSON.parse(event.data);
++      if (data.type === "frame_result" && data.payload) {
++        metricLatency.textContent = Number(data.payload.detection_time || 0).toFixed(2);
++      }
++    } catch (err) {
++      console.error(err);
++    }
++  };
++}
++
++async function loadSettings() {
++  const response = await fetch("/api/webui/settings");
++  if (!response.ok) {
++    throw new Error(await response.text());
++  }
++  const data = await response.json();
++  settings = { ...settings, ...data };
++  syncSettingsToControls();
++}
++
++async function loadRecentExports() {
++  const response = await fetch("/api/webui/exports?limit=8");
++  if (!response.ok) {
++    throw new Error(await response.text());
++  }
++  const data = await response.json();
++  recentExports = Array.isArray(data.items) ? data.items : [];
++  const validIds = new Set(recentExports.map((item) => getExportId(item)));
++  expandedExportIds = new Set([...expandedExportIds].filter((item) => validIds.has(item)));
++  renderExports();
++}
++
++async function saveSettings() {
++  const payload = {
++    threshold: Number(thresholdInput.value),
++    infer_interval_ms: Number(inferIntervalInput.value),
++    jpeg_quality: Number(jpegQualityInput.value),
++    preview_mode: previewModeInput.value,
++    draw_skeleton: drawSkeletonInput.checked,
++    draw_person_bbox: drawPersonBboxInput.checked,
++    draw_suspicious_regions: drawRegionsInput.checked,
++    draw_point_index: drawPointIndexInput.checked,
++    head_only_pose: headOnlyPoseInput.checked,
++    draw_pose_label: drawPoseLabelInput.checked,
++    export_event_video: exportEventVideoInput.checked,
++    export_raw_frames: exportRawFramesInput.checked,
++  };
++  const response = await fetch("/api/webui/settings", {
++    method: "POST",
++    headers: { "Content-Type": "application/json" },
++    body: JSON.stringify(payload),
++  });
++  if (!response.ok) {
++    throw new Error(await response.text());
++  }
++  const data = await response.json();
++  settings = { ...settings, ...data.settings };
++  syncSettingsToControls();
++  applyPreviewMode();
++  pushHistoryMessage("参数调整保存完成");
++  if (running) {
++    startCaptureLoop();
++  }
++  await loadRecentExports();
++}
++
++async function startSession() {
++  if (running) {
++    return;
++  }
++  const response = await fetch("/api/webui/start", {
++    method: "POST",
++    headers: { "Content-Type": "application/json" },
++    body: JSON.stringify({ threshold: Number(settings.threshold) }),
++  });
++  if (!response.ok) {
++    throw new Error(await response.text());
++  }
++  running = true;
++  frameCounter = 0;
++  detectionCounter = 0;
++  lastAlertSignature = "";
++  historyMessageTimes = new Map();
++  metricFrames.textContent = "0";
++  metricDetections.textContent = "0";
++  lastCheatingDetected = false;
++  renderAlerts([]);
++  setBadge("检测进行中", "active");
++  pushHistoryMessage("检测会话开始");
++  applyPreviewMode();
++  lastTick = performance.now();
++  connectSSE();
++  startCaptureLoop();
++}
++
++async function stopSession() {
++  running = false;
++  stopCaptureLoop();
++  if (stream) {
++    stream.close();
++    stream = null;
++  }
++  const response = await fetch("/api/webui/stop", { method: "POST" });
++  let stopData = null;
++  if (response.ok) {
++    stopData = await response.json();
++  }
++  latestFrameBitmap = null;
++  drawFrameSnapshot();
++  applyPreviewMode();
++  if (lastCheatingDetected) {
++    pushHistoryMessage("检测作弊事件结束");
++  }
++  lastCheatingDetected = false;
++  lastAlertSignature = "";
++  const flushState = stopData?.flush_state || {};
++  if (flushState.event_persisted) {
++    pushHistoryMessage(
++      flushState.event_id
++        ? `作弊事件记录已保存: ${flushState.event_id}`
++        : "作弊事件记录已保存",
++    );
++    if (flushState.event_clip_path) {
++      pushHistoryMessage(`事件视频已导出: ${flushState.event_clip_path}`);
++    }
++    if (flushState.event_raw_frames_path) {
++      pushHistoryMessage(`事件原始帧已导出: ${flushState.event_raw_frames_path}`);
++    }
++  }
++  await loadRecentExports();
++  pushHistoryMessage("检测会话结束");
++  setBadge("已停止", "idle");
++}
++
++async function initCamera() {
++  const media = await navigator.mediaDevices.getUserMedia({
++    video: { width: 1280, height: 720, facingMode: "user" },
++    audio: false,
++  });
++  cameraTrack = media.getVideoTracks()[0] || null;
++  videoEl.srcObject = media;
++  videoEl.addEventListener("loadedmetadata", refreshStageAndInfo);
++  videoEl.addEventListener("resize", refreshStageAndInfo);
++  await videoEl.play();
++  refreshStageAndInfo();
++  startCameraInfoPolling();
++}
++
++function resizeOverlay() {
++  const rect = videoEl.getBoundingClientRect();
++  const width = Math.max(1, Math.round(rect.width));
++  const height = Math.max(1, Math.round(rect.height));
++  if (canvasEl.width !== width || canvasEl.height !== height) {
++    canvasEl.width = width;
++    canvasEl.height = height;
++  }
++  if (frameCanvasEl.width !== width || frameCanvasEl.height !== height) {
++    frameCanvasEl.width = width;
++    frameCanvasEl.height = height;
++  }
++  drawFrameSnapshot();
++  updateCameraInfo();
++}
++
++function syncStageSize() {
++  if (!stageEl || !stageShellEl || !videoEl.videoWidth || !videoEl.videoHeight) {
++    return;
++  }
++  const ratio = videoEl.videoWidth / Math.max(1, videoEl.videoHeight);
++  const availableWidth = Math.max(1, stageShellEl.clientWidth - 40);
++  const availableHeight = Math.max(1, stageShellEl.clientHeight - 40);
++
++  let width = availableWidth;
++  let height = width / ratio;
++  if (height > availableHeight) {
++    height = availableHeight;
++    width = height * ratio;
++  }
++
++  stageEl.style.width = `${Math.round(width)}px`;
++  stageEl.style.height = `${Math.round(height)}px`;
++  updateCameraInfo();
++}
++
++startBtn.addEventListener("click", () => {
++  startSession().catch((err) => {
++    console.error(err);
++    setBadge("启动失败", "alert");
++  });
++});
++
++stopBtn.addEventListener("click", () => {
++  stopSession().catch((err) => {
++    console.error(err);
++    setBadge("停止失败", "alert");
++  });
++});
++
++thresholdInput.addEventListener("input", () => {
++  settings.threshold = Number(thresholdInput.value);
++  thresholdValue.textContent = Number(settings.threshold).toFixed(2);
++});
++
++inferIntervalInput.addEventListener("input", () => {
++  settings.infer_interval_ms = Number(inferIntervalInput.value);
++  inferIntervalValue.textContent = String(settings.infer_interval_ms);
++});
++
++jpegQualityInput.addEventListener("input", () => {
++  settings.jpeg_quality = Number(jpegQualityInput.value);
++  jpegQualityValue.textContent = Number(settings.jpeg_quality).toFixed(2);
++});
++
++previewModeInput.addEventListener("change", () => {
++  settings.preview_mode = previewModeInput.value;
++  applyPreviewMode();
++});
++
++drawSkeletonInput.addEventListener("change", () => {
++  settings.draw_skeleton = drawSkeletonInput.checked;
++  if (latestPayload) {
++    drawPayload(latestPayload);
++  }
++});
++
++drawPersonBboxInput.addEventListener("change", () => {
++  settings.draw_person_bbox = drawPersonBboxInput.checked;
++  if (latestPayload) {
++    drawPayload(latestPayload);
++  }
++});
++
++drawRegionsInput.addEventListener("change", () => {
++  settings.draw_suspicious_regions = drawRegionsInput.checked;
++  if (latestPayload) {
++    drawPayload(latestPayload);
++  }
++});
++
++drawPointIndexInput.addEventListener("change", () => {
++  settings.draw_point_index = drawPointIndexInput.checked;
++  if (latestPayload) {
++    drawPayload(latestPayload);
++  }
++});
++
++headOnlyPoseInput.addEventListener("change", () => {
++  settings.head_only_pose = headOnlyPoseInput.checked;
++  if (latestPayload) {
++    drawPayload(latestPayload);
++  }
++});
++
++drawPoseLabelInput.addEventListener("change", () => {
++  settings.draw_pose_label = drawPoseLabelInput.checked;
++  if (latestPayload) {
++    drawPayload(latestPayload);
++  }
++});
++
++exportEventVideoInput.addEventListener("change", () => {
++  settings.export_event_video = exportEventVideoInput.checked;
++});
++
++exportRawFramesInput.addEventListener("change", () => {
++  settings.export_raw_frames = exportRawFramesInput.checked;
++});
++
++saveParamsBtn.addEventListener("click", () => {
++  saveSettings().catch((err) => {
++    console.error(err);
++    setBadge("参数保存失败", "alert");
++  });
++});
++
++window.addEventListener("resize", () => {
++  refreshStageAndInfo();
++});
++
++Promise.all([loadSettings(), loadRecentExports(), initCamera()])
++  .then(() => {
++    applyPreviewMode();
++    setBadge("摄像头已就绪", "idle");
++    renderAlerts([]);
++    renderHistory();
++    pushHistoryMessage("摄像头已就绪，开始接收画面");
++  })
++  .catch((err) => {
++    console.error(err);
++    setBadge("初始化失败", "alert");
++  });
+diff --git a/api/static/index.html b/api/static/index.html
+new file mode 100644
+index 0000000..9b39aa8
+--- /dev/null
++++ b/api/static/index.html
+@@ -0,0 +1,119 @@
++<!DOCTYPE html>
++<html lang="zh-CN">
++<head>
++  <meta charset="UTF-8" />
++  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
++  <title>Visual WebUI 检测面板</title>
++  <link rel="stylesheet" href="/webui/static/styles.css" />
++</head>
++<body>
++  <main class="layout">
++    <section class="stage-shell">
++      <section class="stage">
++        <video id="camera" autoplay playsinline muted></video>
++        <canvas id="frameLayer"></canvas>
++        <canvas id="overlay"></canvas>
++        <div id="statusBadge" class="badge idle">待启动</div>
++      </section>
++    </section>
++
++    <aside class="panel">
++      <h1>Visual WebUI</h1>
++      <div class="alerts">
++        <h2>实时告警</h2>
++        <ul id="alertsList"></ul>
++      </div>
++
++      <div class="actions">
++        <button id="startBtn">开始检测</button>
++        <button id="stopBtn" class="secondary">停止检测</button>
++      </div>
++
++      <div class="metrics">
++        <p><span>会话帧数</span><strong id="metricFrames">0</strong></p>
++        <p><span>检测告警数</span><strong id="metricDetections">0</strong></p>
++        <p><span>当前 FPS</span><strong id="metricFps">-</strong></p>
++        <p><span>单帧耗时(ms)</span><strong id="metricLatency">-</strong></p>
++      </div>
++
++      <div class="metrics">
++        <p><span>摄像头输出</span><strong id="cameraResolution">-</strong></p>
++        <p><span>摄像头比例</span><strong id="cameraRatio">-</strong></p>
++        <p><span>舞台显示尺寸</span><strong id="stageResolution">-</strong></p>
++        <p><span>舞台显示比例</span><strong id="stageRatio">-</strong></p>
++      </div>
++
++      <div class="params">
++        <h2>参数调整</h2>
++        <label class="field">
++          <span>判定阈值</span>
++          <input id="thresholdInput" type="range" min="0" max="1" step="0.01" value="0.6" />
++          <strong id="thresholdValue">0.60</strong>
++        </label>
++        <label class="field">
++          <span>推理间隔(ms)</span>
++          <input id="inferIntervalInput" type="range" min="50" max="1000" step="10" value="120" />
++          <strong id="inferIntervalValue">120</strong>
++        </label>
++        <label class="field">
++          <span>JPEG 质量</span>
++          <input id="jpegQualityInput" type="range" min="0.3" max="1" step="0.05" value="0.8" />
++          <strong id="jpegQualityValue">0.80</strong>
++        </label>
++        <label class="field">
++          <span>预览模式</span>
++          <select id="previewModeInput">
++            <option value="analysis">分析帧预览</option>
++            <option value="live">实时预览</option>
++          </select>
++        </label>
++
++        <label class="check">
++          <input id="drawSkeletonInput" type="checkbox" checked />
++          <span>绘制骨架</span>
++        </label>
++        <label class="check">
++          <input id="drawPersonBboxInput" type="checkbox" checked />
++          <span>绘制人物框</span>
++        </label>
++        <label class="check">
++          <input id="drawRegionsInput" type="checkbox" checked />
++          <span>绘制可疑区域</span>
++        </label>
++        <label class="check">
++          <input id="drawPointIndexInput" type="checkbox" />
++          <span>渲染关键点序号</span>
++        </label>
++        <label class="check">
++          <input id="headOnlyPoseInput" type="checkbox" />
++          <span>仅显示头肩关键点</span>
++        </label>
++        <label class="check">
++          <input id="drawPoseLabelInput" type="checkbox" checked />
++          <span>标记骨架 ID</span>
++        </label>
++        <label class="check">
++          <input id="exportEventVideoInput" type="checkbox" checked />
++          <span>导出事件视频</span>
++        </label>
++        <label class="check">
++          <input id="exportRawFramesInput" type="checkbox" checked />
++          <span>导出原始帧序列</span>
++        </label>
++
++        <button id="saveParamsBtn" class="secondary">保存参数</button>
++      </div>
++      <div class="alerts">
++        <h2>历史消息记录</h2>
++        <ul id="historyList"></ul>
++      </div>
++      <div class="alerts">
++        <h2>最近导出证据</h2>
++        <ul id="exportsList"></ul>
++      </div>
++    </aside>
++  </main>
++
++  <script src="/webui/static/app.js"></script>
++</body>
++</html>
+diff --git a/api/static/styles.css b/api/static/styles.css
+new file mode 100644
+index 0000000..72367d7
+--- /dev/null
++++ b/api/static/styles.css
+@@ -0,0 +1,304 @@
++:root {
++  --bg: #090b10;
++  --panel: #121722;
++  --text: #e8edf6;
++  --muted: #97a3b8;
++  --ok: #1ec980;
++  --warn: #ff7a59;
++  --line: #263247;
++}
++
++* {
++  box-sizing: border-box;
++}
++
++body {
++  margin: 0;
++  background: radial-gradient(circle at top, #111728 0%, var(--bg) 55%);
++  color: var(--text);
++  font-family: "PingFang SC", "Noto Sans SC", sans-serif;
++}
++
++.layout {
++  display: grid;
++  grid-template-columns: 1.4fr 0.8fr;
++  min-height: 100vh;
++}
++
++.stage-shell {
++  margin: 20px;
++  border: 1px solid var(--line);
++  border-radius: 14px;
++  background: #03060d;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  min-height: calc(100vh - 40px);
++  overflow: hidden;
++}
++
++.stage {
++  position: relative;
++  margin: 20px;
++  overflow: hidden;
++  background: #03060d;
++  flex: 0 0 auto;
++}
++
++#camera,
++#frameLayer,
++#overlay {
++  width: 100%;
++  height: 100%;
++  display: block;
++}
++
++#camera {
++  object-fit: contain;
++  z-index: 0;
++}
++
++#frameLayer,
++#overlay {
++  position: absolute;
++  left: 0;
++  top: 0;
++}
++
++#frameLayer {
++  z-index: 1;
++  opacity: 0;
++}
++
++#overlay {
++  pointer-events: none;
++  z-index: 2;
++}
++
++.badge {
++  position: absolute;
++  left: 16px;
++  top: 16px;
++  padding: 8px 12px;
++  border-radius: 10px;
++  font-weight: 600;
++  background: rgba(16, 20, 31, 0.82);
++  border: 1px solid var(--line);
++}
++
++.badge.active {
++  color: var(--ok);
++}
++
++.badge.alert {
++  color: var(--warn);
++}
++
++.badge.idle {
++  color: var(--muted);
++}
++
++.panel {
++  margin: 20px 20px 20px 0;
++  border: 1px solid var(--line);
++  border-radius: 14px;
++  padding: 20px;
++  background: linear-gradient(160deg, rgba(19, 25, 37, 0.95), rgba(11, 15, 22, 0.95));
++}
++
++.panel h1 {
++  margin: 0 0 16px 0;
++}
++
++.actions {
++  display: flex;
++  gap: 10px;
++  margin-bottom: 20px;
++}
++
++button {
++  border: none;
++  border-radius: 10px;
++  padding: 10px 14px;
++  cursor: pointer;
++  font-weight: 600;
++  background: #2a76ff;
++  color: white;
++}
++
++button.secondary {
++  background: #2b3343;
++}
++
++.metrics {
++  display: grid;
++  gap: 8px;
++  margin-bottom: 20px;
++}
++
++.metrics p {
++  margin: 0;
++  padding: 10px 12px;
++  background: rgba(9, 13, 21, 0.8);
++  border: 1px solid var(--line);
++  border-radius: 10px;
++  display: flex;
++  justify-content: space-between;
++  align-items: center;
++}
++
++.metrics span {
++  color: var(--muted);
++}
++
++.alerts h2 {
++  margin: 0 0 8px 0;
++  font-size: 18px;
++}
++
++.alerts {
++  margin-bottom: 20px;
++  border: 1px solid var(--line);
++  border-radius: 10px;
++  padding: 12px;
++  background: rgba(9, 13, 21, 0.6);
++}
++
++.params {
++  margin-bottom: 20px;
++  border: 1px solid var(--line);
++  border-radius: 10px;
++  padding: 12px;
++  background: rgba(9, 13, 21, 0.6);
++}
++
++.params h2 {
++  margin: 0 0 10px 0;
++  font-size: 18px;
++}
++
++.field {
++  display: grid;
++  grid-template-columns: 1fr;
++  gap: 6px;
++  margin-bottom: 10px;
++}
++
++.field span {
++  color: var(--muted);
++  font-size: 13px;
++}
++
++.field strong {
++  color: var(--text);
++  font-size: 13px;
++}
++
++.check {
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  margin-bottom: 8px;
++  color: var(--text);
++}
++
++#alertsList {
++  margin: 0;
++  padding: 0;
++  list-style: none;
++  display: grid;
++  gap: 8px;
++}
++
++#alertsList li,
++#historyList li,
++#exportsList li {
++  border: 1px solid #573327;
++  background: rgba(53, 32, 23, 0.45);
++  border-radius: 8px;
++  padding: 8px 10px;
++}
++
++#historyList,
++#exportsList {
++  margin: 0;
++  padding: 0;
++  list-style: none;
++  display: grid;
++  gap: 8px;
++  max-height: 220px;
++  overflow: auto;
++}
++
++.export-item {
++  display: grid;
++  gap: 6px;
++}
++
++.export-toggle {
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  width: 100%;
++  padding: 0;
++  border: none;
++  background: transparent;
++  color: inherit;
++  text-align: left;
++}
++
++.export-caret {
++  color: var(--muted);
++  font-size: 12px;
++}
++
++.export-title {
++  color: var(--text);
++  font-weight: 600;
++}
++
++.export-meta {
++  color: var(--muted);
++  font-size: 12px;
++  word-break: break-all;
++}
++
++.export-details {
++  display: grid;
++  gap: 8px;
++  padding-top: 4px;
++}
++
++.export-links,
++.export-frame-links {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 8px;
++}
++
++.export-link {
++  color: #8fc2ff;
++  text-decoration: none;
++  font-size: 12px;
++  border: 1px solid rgba(143, 194, 255, 0.28);
++  border-radius: 999px;
++  padding: 4px 8px;
++  background: rgba(24, 46, 76, 0.35);
++}
++
++.export-link:hover {
++  text-decoration: underline;
++  background: rgba(36, 72, 122, 0.45);
++}
++
++.history-time {
++  color: var(--muted);
++  font-size: 11px;
++  margin-right: 8px;
++}
++
++.empty {
++  color: var(--muted);
++  border-color: var(--line) !important;
++  background: rgba(9, 13, 21, 0.8) !important;
++}
+diff --git a/config/config.yaml b/config/config.yaml
+index 7dd2c75..41fb747 100755
+--- a/config/config.yaml
++++ b/config/config.yaml
+@@ -383,7 +383,7 @@ models:
+     tensorrt_path: null
+     use_half_precision: true
+ cpu_acceleration:
+-  mode: fast
++  mode: baseline
+   profiles:
+     baseline:
+       pose_model_path: yolo26s-pose.pt
+diff --git a/docs/DEPLOYMENT.md b/docs/DEPLOYMENT.md
+old mode 100755
+new mode 100644
+index 865381e..b4eedc7
+--- a/docs/DEPLOYMENT.md
++++ b/docs/DEPLOYMENT.md
+@@ -1,599 +1,56 @@
+ # 部署指南
+ 
+-本指南说明如何在一台新电脑上部署监考作弊检测系统。
++## 推荐环境
+ 
+-## ⚠️ 重要提示
++- Python `3.10` 或 `3.11`
++- Poetry 作为默认依赖管理工具
++- 推荐在虚拟环境中运行和测试
+ 
+-**项目文件同步**: 如果项目文件通过 OneDrive 或其他云同步服务同步到新电脑，请注意：
+-- ✅ 项目代码文件会自动同步
+-- ❌ Python 环境和依赖包**不会**同步，需要在新电脑上重新安装
+-- ❌ Conda 环境（如 `torch`）**不会**同步，需要在新电脑上重新创建或使用系统 Python
++## 安装步骤
+ 
+-**推荐方案**: 使用智能安装脚本 `install_dependencies.ps1`，它会自动检测并使用可用的 Python 环境。
+-
+-## 🔐 源码发布身份验证（阶段一）
+-
+-本项目阶段一发布签名技术已确定为：
+-
+-- 默认：`GPG`（用于签名 Git Tag/Release）
+-- 备选：`Sigstore keyless`（按需启用）
+-
+-验证发布者身份时，请优先参考：
+-
+-- [发布签名规范](RELEASE_SIGNING.md)
+-- [版本管理规范](VERSION_MANAGEMENT.md)
+-
+-## 📋 部署前准备
+-
+-### 系统要求
+-- Windows 10/11（64位）
+-- 至少 4GB 内存（推荐 8GB+）
+-- 摄像头设备
+-- 网络连接（用于下载依赖）
+-
+-## 🚀 部署方案
+-
+-### 方案 A: 标准部署（推荐）
+-
+-#### 1. 安装 Python
+-
+-**方式 1: 使用官方安装包（推荐）**
+-
+-1. 访问 Python 官网：https://www.python.org/downloads/
+-2. 下载 **Python 3.10 或 3.11（64位）**（推荐，最佳兼容性）
+-   - Python 3.12 也可使用，但部分旧包可能不兼容
+-   - Python 3.13+ 不推荐，可能遇到依赖包问题
+-   - 详细版本要求请参考 [Python 版本要求](../PYTHON_VERSION.md)
+-3. 运行安装程序，**务必勾选 "Add Python to PATH"**
+-4. 选择 "Install Now" 或自定义安装路径
+-
+-**方式 2: 使用国内镜像下载（更快）**
+-
+-```powershell
+-# 使用清华大学镜像下载 Python
+-# 访问: https://mirrors.tuna.tsinghua.edu.cn/python-release-for-windows/
+-# 或使用其他国内镜像站点
+-```
+-
+-**验证安装**：
+-```powershell
+-python --version
+-pip --version
+-```
+-
+-#### 2. 配置 pip 国内镜像
+-
+-创建或编辑 pip 配置文件：
+-
+-**Windows 位置**：`%APPDATA%\pip\pip.ini`
+-
+-```powershell
+-# 创建配置目录
+-mkdir $env:APPDATA\pip
+-
+-# 创建配置文件
+-@"
+-[global]
+-index-url = https://pypi.tuna.tsinghua.edu.cn/simple
+-trusted-host = pypi.tuna.tsinghua.edu.cn
+-"@ | Out-File -FilePath "$env:APPDATA\pip\pip.ini" -Encoding utf8
+-```
+-
+-**或者使用命令行配置**：
+-```powershell
+-pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+-pip config set global.trusted-host pypi.tuna.tsinghua.edu.cn
+-```
+-
+-**常用国内镜像**：
+-- 清华大学：`https://pypi.tuna.tsinghua.edu.cn/simple`
+-- 阿里云：`https://mirrors.aliyun.com/pypi/simple/`
+-- 中科大：`https://pypi.mirrors.ustc.edu.cn/simple/`
+-- 豆瓣：`https://pypi.douban.com/simple/`
+-
+-#### 3. 安装项目依赖
+-
+-**推荐方式：使用智能安装脚本**（自动检测 Python 环境）
+-
+-```powershell
+-# 进入项目目录
+-cd C:\path\to\project
+-
+-# 使用智能安装脚本（自动检测系统 Python 或 conda base 环境）
+-# 脚本会自动处理编码、pip 配置、numpy 兼容性等问题
+-powershell -ExecutionPolicy Bypass -File install_dependencies.ps1
+-```
+-
+-**备选方式 2：手动安装**
+-
+-```powershell
+-# 安装依赖（使用国内镜像）
+-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+-```
+-
+-如果已配置全局镜像，直接运行：
+-```powershell
+-pip install -r requirements.txt
+-```
+-
+-#### 4. 验证安装
+-
+-```powershell
+-# 测试导入
+-python -c "import cv2; import ultralytics; import mediapipe; print('所有依赖安装成功')"
+-```
+-
+-#### 5. 运行程序
+-
+-```powershell
+-python main.py
+-```
+-
+----
+-
+-### 方案 B: 使用 Anaconda/Miniconda（推荐用于深度学习项目）
+-
+-#### 1. 安装 Miniconda
+-
+-**下载地址**（使用国内镜像）：
+-- 清华大学镜像：https://mirrors.tuna.tsinghua.edu.cn/anaconda/miniconda/
+-- 下载 **Python 3.10 或 3.11 版本（64位）**（推荐）
+-  - 详细版本要求请参考 [Python 版本要求](../PYTHON_VERSION.md)
+-
+-**安装步骤**：
+-1. 运行安装程序
+-2. 选择 "Add Miniconda to PATH"（或手动添加）
+-3. 完成安装
+-
+-#### 2. 配置 Conda 国内镜像
+-
+-```powershell
+-# 配置 conda 使用清华大学镜像
+-conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
+-conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free
+-conda config --set show_channel_urls yes
+-
+-# 配置 pip 镜像（同上）
+-pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+-```
+-
+-#### 3. 创建虚拟环境（可选）
+-
+-**方式 1：使用 base 环境（推荐，无需创建新环境）**
+-
+-```powershell
+-# 直接使用 base 环境，运行智能安装脚本
+-powershell -ExecutionPolicy Bypass -File install_dependencies.ps1
+-```
+-
+-**方式 2：创建新环境**
+-
+-```powershell
+-# 创建环境
+-conda create -n cheating_detection python=3.10
+-
+-# 激活环境
+-conda activate cheating_detection
+-
+-# 使用智能安装脚本（推荐）
+-powershell -ExecutionPolicy Bypass -File install_dependencies.ps1
+-
+-# 或手动安装
+-pip install -r requirements.txt
+-```
+-
+-#### 4. 运行程序
+-
+-```powershell
+-conda activate cheating_detection
+-python main.py
+-```
+-
+----
+-
+-### 方案 C: 打包成可执行文件（无需安装 Python）
+-
+-#### 1. 在开发机器上安装 PyInstaller
+-
+-```powershell
+-pip install pyinstaller -i https://pypi.tuna.tsinghua.edu.cn/simple
+-```
+-
+-#### 2. 创建打包脚本
+-
+-创建 `build_exe.py`：
+-
+-```python
+-"""打包成可执行文件"""
+-import PyInstaller.__main__
+-
+-PyInstaller.__main__.run([
+-    'main.py',
+-    '--name=CheatingDetection',
+-    '--onefile',
+-    '--windowed',  # 无控制台窗口（可选）
+-    '--add-data=config;config',  # 包含配置文件
+-    '--hidden-import=cv2',
+-    '--hidden-import=ultralytics',
+-    '--hidden-import=mediapipe',
+-    '--collect-all=ultralytics',
+-    '--collect-all=mediapipe',
+-])
+-```
+-
+-#### 3. 执行打包
+-
+-```powershell
+-python build_exe.py
+-```
+-
+-#### 4. 分发
+-
+-打包后的可执行文件在 `dist/` 目录，可以直接复制到目标电脑运行。
+-
+-**注意**：打包后的文件较大（可能 500MB+），因为包含了所有依赖。
+-
+-#### 5. 可执行文件签名（B 方案，按需启用）
+-
+-如果你开始对外分发可执行文件，建议同时启用平台原生签名，方便接收方在系统层面验证“发布者是谁”。
+-
+-**macOS（codesign）**
++### macOS / Linux
+ 
+ ```bash
+-# 对可执行文件签名（示例）
+-codesign --force --deep --timestamp --sign "Developer ID Application: Your Name (TEAMID)" dist/CheatingDetection
+-
+-# 验签并查看签名身份
+-codesign --verify --deep --strict --verbose=2 dist/CheatingDetection
+-codesign -dv --verbose=4 dist/CheatingDetection
+-spctl -a -vv dist/CheatingDetection
+-```
+-
+-**Windows（Authenticode）**
+-
+-```powershell
+-# 查看签名状态（接收方常用）
+-Get-AuthenticodeSignature .\dist\CheatingDetection.exe | Format-List
++python -m pip install poetry
++poetry install
++poetry run python main.py
+ ```
+ 
+-> 建议：发布页同时公开“证书主体名称 + 证书指纹（Thumbprint）”，接收方核对后再执行程序。
++### Windows
+ 
+----
+-
+-## 📦 快速部署脚本
+-
+-### Windows PowerShell 一键部署脚本
+-
+-#### ⚠️ PowerShell 执行策略问题
+-
+-如果运行脚本时遇到以下错误：
+-```
+-无法加载文件 ...\install_dependencies.ps1，因为在此系统上禁止运行脚本
+-```
+-
+-**解决方案（选择其一）**：
+-
+-**方法 1: 临时绕过（推荐，无需管理员权限）**
+-```powershell
+-powershell -ExecutionPolicy Bypass -File install_dependencies.ps1
+-```
+-
+-**方法 2: 临时设置当前会话（仅当前 PowerShell 窗口有效）**
+-```powershell
+-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+-.\install_dependencies.ps1
+-```
+-
+-**方法 3: 永久设置（仅当前用户，推荐）**
+-```powershell
+-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+-.\install_dependencies.ps1
+-```
+-
+-**方法 4: 查看当前执行策略**
+-```powershell
+-Get-ExecutionPolicy
+-```
+-
+-**说明**：
+-- `Bypass`: 临时绕过，仅本次执行有效
+-- `RemoteSigned`: 允许运行本地脚本和已签名的远程脚本（推荐）
+-- `Process`: 仅当前 PowerShell 会话有效
+-- `CurrentUser`: 仅当前用户有效（推荐，无需管理员权限）
+-
+-#### 使用安装脚本
+-
+-项目已提供 `install_dependencies.ps1` 脚本，包含所有部署功能：
+-
+-```powershell
+-# 使用智能安装脚本（推荐）
+-powershell -ExecutionPolicy Bypass -File install_dependencies.ps1
+-```
+-
+-脚本功能：
+-- 自动检测 Python 环境（系统 Python 或 conda）
+-- 自动配置 pip 镜像
+-- 处理编码问题
+-- 处理 numpy 兼容性问题
+-- 安装所有依赖包
+-
+-如需查看脚本内容，请查看项目根目录的 `install_dependencies.ps1` 文件。
+-    Write-Host "✗ Python 未安装，请先安装 Python 3.10+"
+-    Write-Host "下载地址: https://www.python.org/downloads/"
+-    exit 1
+-}
+-
+-# 配置 pip 镜像
+-Write-Host "`n[2/5] 配置 pip 国内镜像..." -ForegroundColor Yellow
+-$pipConfigPath = "$env:APPDATA\pip\pip.ini"
+-$pipConfigDir = Split-Path $pipConfigPath
+-
+-if (-not (Test-Path $pipConfigDir)) {
+-    New-Item -ItemType Directory -Path $pipConfigDir -Force | Out-Null
+-}
+-
+-$pipConfig = @"
+-[global]
+-index-url = https://pypi.tuna.tsinghua.edu.cn/simple
+-trusted-host = pypi.tuna.tsinghua.edu.cn
+-"@
+-
+-Set-Content -Path $pipConfigPath -Value $pipConfig -Encoding UTF8
+-Write-Host "✓ pip 镜像已配置" -ForegroundColor Green
+-
+-# 升级 pip
+-Write-Host "`n[3/5] 升级 pip..." -ForegroundColor Yellow
+-python -m pip install --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/simple
+-Write-Host "✓ pip 已升级" -ForegroundColor Green
+-
+-# 安装依赖
+-Write-Host "`n[4/5] 安装项目依赖（这可能需要几分钟）..." -ForegroundColor Yellow
+-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+-if ($LASTEXITCODE -eq 0) {
+-    Write-Host "✓ 依赖安装完成" -ForegroundColor Green
+-} else {
+-    Write-Host "✗ 依赖安装失败，请检查网络连接" -ForegroundColor Red
+-    exit 1
+-}
+-
+-# 验证安装
+-Write-Host "`n[5/5] 验证安装..." -ForegroundColor Yellow
+-python -c "import cv2; import ultralytics; import mediapipe; print('✓ 所有依赖验证通过')"
+-if ($LASTEXITCODE -eq 0) {
+-    Write-Host "✓ 验证成功" -ForegroundColor Green
+-} else {
+-    Write-Host "✗ 验证失败，某些依赖可能未正确安装" -ForegroundColor Red
+-    exit 1
+-}
+-
+-Write-Host "`n========================================" -ForegroundColor Cyan
+-Write-Host "部署完成！" -ForegroundColor Green
+-Write-Host "========================================" -ForegroundColor Cyan
+-Write-Host "`n运行程序: python main.py" -ForegroundColor Yellow
+-Write-Host "启动 API: python run_api.py" -ForegroundColor Yellow
+-```
+-
+----
+-
+-## 🔧 详细步骤
+-
+-### 步骤 1: 安装 Python
+-
+-1. **下载 Python**
+-   - 访问：https://www.python.org/downloads/
+-   - 或使用国内镜像：https://mirrors.tuna.tsinghua.edu.cn/python-release-for-windows/
+-   - 下载 **Python 3.10 或 3.11（64位）**（推荐，最佳兼容性）
+-     - 详细版本要求请参考 [Python 版本要求](../PYTHON_VERSION.md)
+-
+-2. **安装 Python**
+-   - 运行安装程序
+-   - ✅ **重要**：勾选 "Add Python to PATH"
+-   - 选择 "Install Now" 或自定义路径
+-   - 等待安装完成
+-
+-3. **验证安装**
+-   ```powershell
+-   python --version
+-   # 应显示: Python 3.10.x 或 Python 3.11.x
+-   
+-   pip --version
+-   # 应显示: pip x.x.x
+-   ```
+-
+-### 步骤 2: 配置 pip 镜像
+-
+-**方法 1: 使用命令行（推荐）**
+-
+-```powershell
+-# 配置清华大学镜像
+-pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+-pip config set global.trusted-host pypi.tuna.tsinghua.edu.cn
+-
+-# 验证配置
+-pip config list
+-```
+-
+-**方法 2: 手动创建配置文件**
+-
+-1. 创建目录：`%APPDATA%\pip`
+-2. 创建文件：`pip.ini`
+-3. 添加内容：
+-   ```ini
+-   [global]
+-   index-url = https://pypi.tuna.tsinghua.edu.cn/simple
+-   trusted-host = pypi.tuna.tsinghua.edu.cn
+-   ```
+-
+-### 步骤 3: 获取项目文件
+-
+-**方式 1: 从 Git 仓库克隆**
+ ```powershell
+-git clone <repository-url>
+-cd Visual
++python -m pip install poetry
++poetry install
++poetry run python main.py
+ ```
+ 
+-**方式 2: 复制项目文件夹**
+-- 将整个项目文件夹复制到目标电脑
+-- 确保包含所有文件（特别是 `requirements.txt` 和 `config/` 目录）
++## 默认运行方式
+ 
+-### 步骤 4: 安装依赖
++当前默认入口为 WebUI：
+ 
+-```powershell
+-# 进入项目目录
+-cd C:\path\to\Visual
+-
+-# 安装依赖（使用国内镜像）
+-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+-
+-# 如果已配置全局镜像，直接运行：
+-pip install -r requirements.txt
+-```
+-
+-**安装时间**：根据网络速度，可能需要 5-15 分钟
+-
+-### 步骤 5: 验证安装
+-
+-```powershell
+-# 测试关键依赖
+-python -c "import cv2; print('OpenCV:', cv2.__version__)"
+-python -c "import ultralytics; print('Ultralytics 已安装')"
+-python -c "import mediapipe; print('MediaPipe 已安装')"
+-```
+-
+-### 步骤 6: 配置项目
+-
+-1. **检查配置文件**
+-   ```powershell
+-   # 确保配置文件存在
+-   Test-Path config\config.yaml
+-   ```
+-
+-2. **调整配置（如需要）**
+-   - 编辑 `config/config.yaml`
+-   - 修改摄像头设备 ID、分辨率等
+-
+-### 步骤 7: 运行程序
+-
+-```powershell
+-# 运行主程序
+-python main.py
+-
+-# 或启动 API 服务
+-python run_api.py
+-```
+-
+----
+-
+-## 🐛 常见问题
+-
+-### 问题 1: Python 未添加到 PATH
+-
+-**症状**：
+-```
+-'python' 不是内部或外部命令
+-```
+-
+-**解决方案**：
+-1. 重新安装 Python，确保勾选 "Add Python to PATH"
+-2. 或手动添加到 PATH：
+-   - 系统属性 → 高级 → 环境变量
+-   - 编辑 PATH，添加 Python 安装路径（如 `C:\Python310`）
+-
+-### 问题 2: pip 安装失败（网络问题）
+-
+-**症状**：
+-```
+-WARNING: Retrying (Retry(total=4, connect=None, read=None, redirect=None, status=None))
++```bash
++poetry run python main.py
+ ```
+ 
+-**解决方案**：
+-1. 检查网络连接
+-2. 使用国内镜像（已配置）
+-3. 增加超时时间：
+-   ```powershell
+-   pip install -r requirements.txt --default-timeout=100 -i https://pypi.tuna.tsinghua.edu.cn/simple
+-   ```
++启动后访问：
+ 
+-### 问题 3: 某些包安装失败
++- WebUI: `http://127.0.0.1:8000/webui`
++- API 文档: `http://127.0.0.1:8000/docs`
+ 
+-**症状**：
+-```
+-ERROR: Could not find a version that satisfies the requirement xxx
+-```
++## 仅启动 API
+ 
+-**解决方案**：
+-1. 升级 pip：
+-   ```powershell
+-   python -m pip install --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/simple
+-   ```
+-2. 单独安装失败的包：
+-   ```powershell
+-   pip install <package-name> -i https://pypi.tuna.tsinghua.edu.cn/simple
+-   ```
+-
+-### 问题 4: 缺少 Visual C++ 运行库
+-
+-**症状**：
+-```
+-Microsoft Visual C++ 14.0 or greater is required
++```bash
++poetry run uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+ ```
+ 
+-**解决方案**：
+-1. 下载并安装 Visual C++ Redistributable：
+-   - https://aka.ms/vs/17/release/vc_redist.x64.exe
+-2. 或使用预编译的 wheel 包（pip 会自动选择）
+-
+-### 问题 5: 摄像头无法打开
+-
+-**解决方案**：
+-1. 检查摄像头权限（Windows 设置 → 隐私 → 摄像头）
+-2. 检查设备 ID（在 `config/config.yaml` 中修改）
+-3. 确保摄像头未被其他程序占用
+-
+----
+-
+-## 📝 部署检查清单
+-
+-- [ ] Python 3.10+ 已安装
+-- [ ] Python 已添加到 PATH
+-- [ ] pip 已配置国内镜像
+-- [ ] 项目文件已复制到目标电脑
+-- [ ] 所有依赖已安装（`pip install -r requirements.txt`）
+-- [ ] 依赖验证通过（`python -c "import cv2; import ultralytics; import mediapipe"`）
+-- [ ] 配置文件存在（`config/config.yaml`）
+-- [ ] 摄像头权限已授予
+-- [ ] 程序可以正常运行（`python main.py`）
++## 发布前建议检查
+ 
+----
+-
+-## 🚀 快速部署命令（一键执行）
+-
+-```powershell
+-# 1. 配置 pip 镜像
+-pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+-pip config set global.trusted-host pypi.tuna.tsinghua.edu.cn
+-
+-# 2. 升级 pip
+-python -m pip install --upgrade pip
+-
+-# 3. 安装依赖
+-pip install -r requirements.txt
+-
+-# 4. 验证安装
+-python -c "import cv2; import ultralytics; import mediapipe; print('部署成功！')"
+-
+-# 5. 运行程序
+-python main.py
++```bash
++venv/bin/python -m py_compile main.py api/main.py src/**/*.py tests/**/*.py
++venv/bin/python -m pytest -q tests/test_stage_regression.py
+ ```
+ 
+----
+-
+-## 📦 离线部署（无网络环境）
+-
+-如果需要离线部署，请参考 [离线部署指南](OFFLINE_DEPLOYMENT.md)（待创建）。
+-
+----
+-
+-**最后更新**: 2025-12-17  
+-**版本**: 2.1.1
++## 签名与发布
+ 
++- 源码版本发布签名见 `docs/RELEASE_SIGNING.md`
++- 公开证明材料默认导出到 `release-proof/vX.Y.Z/`
+diff --git a/docs/RELEASE_SIGNING.md b/docs/RELEASE_SIGNING.md
+index 64d8593..88dc92c 100644
+--- a/docs/RELEASE_SIGNING.md
++++ b/docs/RELEASE_SIGNING.md
+@@ -1,167 +1,58 @@
+-# 发布签名规范（阶段一）
++# 发布签名规范
+ 
+-## 目的
++## 目标
+ 
+-本规范用于确保第三方可以独立验证“该版本确由项目发布者发布”。
++为每个公开版本提供可验证的发布者身份链路，使第三方在不访问私有源码仓库的情况下，也能验证某个版本确由发布者生成。
+ 
+-阶段一聚焦**发布者身份来源证明（ownership）**，不把防篡改与授权控制作为第一阶段硬要求。
++## 当前默认方案
+ 
+-## 技术选型结论（已确定）
++- 私有源码仓库保存完整代码与开发历史
++- 使用 GPG 为发布 Tag 签名
++- 导出公开证明材料到 `release-proof/vX.Y.Z/`
++- 对外公开公钥指纹、Tag 验证结果和证明材料
+ 
+-- 默认方案：`GPG`（签名 Git Tag/Release）
+-- 备选方案：`Sigstore keyless`（按需启用）
++## 本地发布步骤
+ 
+-结论说明：阶段一统一使用 GPG 作为标准流程；仅在团队明确需要“无密钥托管”或 CI/CD OIDC 身份签名时，才启用 Sigstore keyless。
+-
+-## 选型依据
+-
+-### 默认采用 GPG 的原因
+-
+-- 生态成熟，Git/GitHub 原生支持 tag 签名校验
+-- 离线可验，接收方可直接用公钥指纹完成核验
+-- 与当前发布流程兼容，实施成本低
+-
+-### Sigstore 作为备选的适用场景
+-
+-- 需要免管理私钥文件的 keyless 工作流
+-- 需要绑定 OIDC 身份（例如 CI 机器人身份）进行可追溯签名
+-- 团队已具备 Fulcio/Rekor 验证链路认知并接受其依赖模型
+-
+-## 阶段一统一发布要求（GPG）
+-
+-每次正式发布至少满足以下要求：
+-
+-1. 使用 GPG 对 Git Tag 进行签名（`git tag -s`）
+-2. 在发布说明中公开签名身份信息（至少包含公钥指纹）
+-3. 提供可复现的验证命令与预期结果，支持第三方独立完成验证
+-
+-## 发布者操作步骤（GPG）
+-
+-### 1) 准备签名环境
++1. 确认版本号已完成更新：`src/version.py`、`pyproject.toml`、`VERSION`、`CHANGELOG.md`、`README.md`
++2. 提交发布内容
++3. 创建签名 Tag：
+ 
+ ```bash
+-# 安装 GPG（macOS）
+-brew install gnupg
+-
+-# 查看本机密钥
+-gpg --list-secret-keys --keyid-format LONG
++git tag -s vX.Y.Z -m "Release vX.Y.Z"
+ ```
+ 
+-### 2) 生成或导入发布密钥
++4. 本地验证签名：
+ 
+ ```bash
+-# 无密钥时生成（交互式）
+-gpg --full-generate-key
+-
+-# 导出公钥（对外公布）
+-gpg --armor --export "<your-email>" > public-key.asc
+-
+-# 输出公钥指纹（发布页中必须出现）
+-gpg --fingerprint "<your-email>"
++git verify-tag vX.Y.Z
++git show vX.Y.Z --show-signature
+ ```
+ 
+-### 3) 签名版本 Tag
++## 公开证明材料
+ 
+-```bash
+-# 例：发布 v3.6.1
+-git tag -s v3.6.1 -m "Release v3.6.1"
+-git show v3.6.1 --show-signature
+-```
+-
+-### 4) 接收方验证命令
++使用以下方式导出：
+ 
+ ```bash
+-# 导入发布者公钥
+-gpg --import public-key.asc
+-
+-# 验证 tag 签名
+-git verify-tag v3.6.1
+-git show v3.6.1 --show-signature
+-```
+-
+-验签通过标准：
+-
+-- `git verify-tag` 返回 `Good signature` 且退出码为 0
+-- 显示的签名指纹与发布页面公开指纹一致
+-
+-验签失败判定：
+-
+-- 出现 `BAD signature` / `No public key` / 指纹不一致，均视为“不可证明来源”
+-
+-## 对外公开信息清单
+-
+-- 发布者 GPG 公钥指纹（长期稳定，变更需公告）
+-- 对应版本的 tag 名称（例如 `vX.Y.Z`）
+-- 验证命令示例与失败判定标准
+-
+-## 折中方案（私有代码仓库 + 公开证明仓库）
+-
+-当代码仓库需要保持私有，但你仍希望外部能验证“这是你发布的”，推荐使用以下配置：
+-
+-1. 私有仓库中完成正常发布（签名 tag）
+-2. 导出不含源码的证明材料到 `release-proof/<tag>/`
+-3. 将该目录上传到公开证明仓库或公开 Release 页面
+-
+-导出命令：
+-
+-```bash
+-# 自动取最新 tag
++python scripts/tools/export_release_proof.py vX.Y.Z <signer_email>
++# 或
+ make export-proof
+-
+-# 或显式指定 tag / 签名邮箱
+-python scripts/tools/export_release_proof.py v3.6.1 zjn.2006@foxmail.com
+-```
+-
+-导出的公开材料包括：
+-
+-- `PUBLIC_RELEASE_PROOF.md`：第三方验证说明
+-- `tag-signature.txt`：`git show <tag> --show-signature` 输出
+-- `tag-verify.txt`：`git verify-tag <tag>` 输出
+-- `gpg-fingerprint.txt`：公钥指纹（若可导出）
+-- `public-key.asc`：公钥文件（若可导出）
+-
+-验证方不需要访问私有源码，只需按 `PUBLIC_RELEASE_PROOF.md` 中步骤执行验签，即可完成发布者身份核验。
+-
+-## 试发布演练记录
+-
+-### 演练时间
+-
+-- 2026-03-16
+-
+-### 演练目标
+-
+-- 验证当前环境是否满足“签名 tag + 第三方验签”的最小条件
+-
+-### 演练命令与结果
+-
+-```bash
+-git rev-parse --is-inside-work-tree
+ ```
+ 
+-结果：`fatal: not a git repository (or any of the parent directories): .git`
+-
+-```bash
+-gpg --version
+-```
+-
+-结果：`command not found: gpg`
+-
+-### 结论
+-
+-- 当前工作目录尚未初始化 Git 仓库，无法执行 `git tag -s`
+-- 当前环境未安装 GPG，无法进行签名与验签
+-- 签名流程文档已就绪，待满足前置条件后可按“发布者操作步骤（GPG）”直接执行
++导出目录通常包含：
+ 
+-## 技术切换策略（GPG -> Sigstore）
++- `PUBLIC_RELEASE_PROOF.md`
++- `tag-signature.txt`
++- `tag-verify.txt`
++- `gpg-fingerprint.txt`
++- `public-key.asc`
+ 
+-当满足以下任一条件，可评估将阶段一默认方案切换为 Sigstore：
++## 验收标准
+ 
+-- 发布流程主要在 CI 中执行，且组织要求 OIDC 身份签名
+-- 团队不再维护长期 GPG 私钥托管策略
+-- 外部合作方要求提供 Sigstore 验证链路
++- `git verify-tag vX.Y.Z` 显示 `Good signature`
++- `release-proof/vX.Y.Z/` 生成成功
++- 对外可公开公钥指纹和验证命令
+ 
+-切换后需同步更新：
++## 备注
+ 
+-- `README.md` 中的发布者验证入口
+-- `docs/DEPLOYMENT.md` 中的验证步骤
+-- 本文档中的默认方案与命令示例
++- 本项目默认采用“私有源码仓库 + 公开证明仓库”的发布方式
++- 若后续需要可执行文件签名，另见 `docs/DEPLOYMENT.md`
+diff --git a/guides/QUICK_START.md b/guides/QUICK_START.md
+index 60593ba..d3dd717 100755
+--- a/guides/QUICK_START.md
++++ b/guides/QUICK_START.md
+@@ -29,7 +29,7 @@
+ 
+ #### 情况 2: 未安装 Python
+ 
+-请参考 [部署指南](docs/DEPLOYMENT.md) 进行完整部署，或：
++请参考 [部署指南](../docs/DEPLOYMENT.md) 进行完整部署，或：
+ 1. 下载并安装 Python: https://www.python.org/downloads/
+ 2. 或安装 Anaconda: https://www.anaconda.com/download
+ 3. 然后运行 `.\install_dependencies.ps1`
+diff --git a/main.py b/main.py
+index 01822da..c10ce29 100755
+--- a/main.py
++++ b/main.py
+@@ -1,80 +1,45 @@
+-"""主程序入口"""
++"""主程序入口（默认启动 WebUI）。"""
+ import traceback
+ import warnings
+-import os
+-from src.core.application import Application
++import uvicorn
++
+ from src.core.config_loader import ConfigLoader
+ from src.version import __version__
+-from src.utils.model_selector import select_model
+-
+-warnings.filterwarnings('ignore', category=UserWarning, module='google.protobuf')
+-warnings.filterwarnings('ignore', message='SymbolDatabase.GetPrototype.*is deprecated')
+-warnings.filterwarnings('ignore', message='.*FlashAttention.*is not available.*')
+-warnings.filterwarnings('ignore', message='.*Using scaled_dot_product_attention instead.*')
+-
+ 
+-def _resolve_repo_usage(model_path, use_yolov13_repo):
+-    """统一决议仓库开关，避免 UI 值与运行时策略冲突。"""
+-    selected_model_name = os.path.basename(model_path).lower() if model_path else ""
+-    if selected_model_name and "yolov13" not in selected_model_name:
+-        return False
+-    return use_yolov13_repo
++warnings.filterwarnings("ignore", category=UserWarning, module="google.protobuf")
++warnings.filterwarnings("ignore", message="SymbolDatabase.GetPrototype.*is deprecated")
++warnings.filterwarnings("ignore", message=".*FlashAttention.*is not available.*")
++warnings.filterwarnings("ignore", message=".*Using scaled_dot_product_attention instead.*")
+ 
+ 
+ def main():
+     print("\n" + "=" * 60)
+     print(f"监考作弊检测系统 v{__version__}")
+     print("=" * 60)
+-    print("优化特性:")
+-    print("  ✓ 多线程处理(检测和显示分离)")
+-    print("  ✓ 模型优化(半精度推理)")
+-    print("  ✓ 帧队列管理(避免内存积累)")
+-    print("  ✓ 性能监控(FPS和检测时间)")
++    print("运行模式: WebUI（已替换 OpenCV 桌面窗口）")
+     print("=" * 60 + "\n")
+-    
++
+     try:
+         config = ConfigLoader("config/config.yaml")
+     except FileNotFoundError as e:
+         print(f"错误: {e}")
+         print("请确保配置文件存在: config/config.yaml")
+         return
+-    
+-    try:
+-        print("正在显示模型选择对话框...")
+-        current_model_path = config.get("models.yolo.model_path")
+-        current_detect_model_path = config.get("models.yolo.detect_model_path")
+-        action, model_path, detect_model_path, use_yolov13_repo = select_model(
+-            current_model_path,
+-            current_detect_model_path,
+-        )
+ 
+-        if action == "confirm":
+-            use_yolov13_repo = _resolve_repo_usage(model_path, use_yolov13_repo)
+-            print(f"✓ 用户选择的模型: {model_path}")
+-            config.set("models.yolo.model_path", model_path)
+-            if detect_model_path is not None:
+-                config.set("models.yolo.detect_model_path", detect_model_path)
+-                print(f"✓ 手机检测模型: {detect_model_path}")
+-            if use_yolov13_repo is not None:
+-                config.set("models.yolo.use_yolov13_repo", use_yolov13_repo)
+-            print(f"✓ 使用 YOLOv13 本地仓库: {'是' if use_yolov13_repo else '否'}")
+-        elif action == "use_default":
+-            print("✓ 保持配置文件中的默认模型设置（不覆盖当前配置）")
+-        elif action == "cancel":
+-            print("✓ 用户取消模型选择，继续使用当前配置")
+-        else:
+-            print("⚠ 模型选择器异常，继续使用当前配置")
+-        
+-        print()
+-    except Exception as e:
+-        print(f"模型选择对话框错误: {e}")
+-        print("将继续使用当前配置")
+-        traceback.print_exc()
+-        print()
+-    
++    host = str(config.get("api.host", "0.0.0.0"))
++    port = int(config.get("api.port", 8000))
++    reload_enabled = bool(config.get("api.reload", False))
++
++    print(f"WebUI 地址: http://127.0.0.1:{port}/webui")
++    print(f"API 文档: http://127.0.0.1:{port}/docs")
++
+     try:
+-        app = Application(config)
+-        app.run()
++        uvicorn.run(
++            "api.main:app",
++            host=host,
++            port=port,
++            reload=reload_enabled,
++        )
+     except KeyboardInterrupt:
+         print("\n程序被用户中断")
+     except Exception as e:
+diff --git a/pyproject.toml b/pyproject.toml
+index b24cc1f..8429797 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -1,6 +1,6 @@
+ [project]
+ name = "visual-cheating-detection"
+-version = "3.8.0"
++version = "4.0.0"
+ description = "Real-time proctoring and cheating detection system."
+ readme = "README.md"
+ authors = [{ name = "Visual Team" }]
+diff --git a/src/core/application.py b/src/core/application.py
+index 8e75a9a..a455dac 100755
+--- a/src/core/application.py
++++ b/src/core/application.py
+@@ -1713,6 +1713,11 @@ class Application:
+         if skip_detection:
+             return None, {}
+ 
++        if not hasattr(self, "_runtime_frame_counter"):
++            self._runtime_frame_counter = 0
++        if not hasattr(self, "runtime_frame_step"):
++            self.runtime_frame_step = 1
++
+         self._runtime_frame_counter += 1
+         if self.runtime_frame_step > 1 and ((self._runtime_frame_counter - 1) % self.runtime_frame_step != 0):
+             return None, {}
+diff --git a/src/managers/file_manager.py b/src/managers/file_manager.py
+index efddc40..74fd3f3 100755
+--- a/src/managers/file_manager.py
++++ b/src/managers/file_manager.py
+@@ -68,9 +68,11 @@ class FileManager:
+         self.evidence_clips_dir = os.path.join(self.cheating_events_dir, "clips")
+         self.evidence_screenshots_dir = os.path.join(self.cheating_events_dir, "screenshots")
+         self.evidence_packages_dir = os.path.join(self.cheating_events_dir, "packages")
++        self.evidence_raw_frames_dir = os.path.join(self.cheating_events_dir, "raw_frames")
+         os.makedirs(self.evidence_clips_dir, exist_ok=True)
+         os.makedirs(self.evidence_screenshots_dir, exist_ok=True)
+         os.makedirs(self.evidence_packages_dir, exist_ok=True)
++        os.makedirs(self.evidence_raw_frames_dir, exist_ok=True)
+         self.evidence_package_index: List[Dict[str, Any]] = []
+         
+         # 初始化图表生成器
+@@ -223,6 +225,9 @@ class FileManager:
+         event_payload: Dict[str, Any],
+         source_mode: str = "camera",
+         window_seconds: Optional[Dict[str, float]] = None,
++        frame_samples: Optional[List[Any]] = None,
++        export_clip: Optional[bool] = None,
++        export_raw_frames: Optional[bool] = None,
+     ) -> Optional[Dict[str, Any]]:
+         """保存事件证据包（短视频+截图+JSON）。"""
+         if not bool(self.evidence_config.get('enabled', True)):
+@@ -231,14 +236,17 @@ class FileManager:
+             return None
+ 
+         evidence_id = str(event_id or f"evt_{timestamp}").replace(" ", "_")
+-        save_clip = bool(self.evidence_config.get('save_clip', True))
++        save_clip = bool(self.evidence_config.get('save_clip', True)) if export_clip is None else bool(export_clip)
+         save_screenshot = bool(self.evidence_config.get('save_screenshot', True))
+         save_json = bool(self.evidence_config.get('save_json', True))
++        save_raw_frames = bool(export_raw_frames) if export_raw_frames is not None else False
+         fps_value = float(fps) if fps and fps > 0 else 30.0
+ 
+         clip_path = None
+         screenshot_path = None
+         package_path = None
++        raw_frames_dir_path = None
++        frame_manifest_path = None
+ 
+         try:
+             if save_clip:
+@@ -267,6 +275,32 @@ class FileManager:
+                     screenshot_frame = frames[len(frames) // 2]
+                 cv2.imwrite(screenshot_path, screenshot_frame)
+ 
++            if save_raw_frames and frame_samples:
++                raw_frames_dir_path = os.path.join(self.evidence_raw_frames_dir, evidence_id)
++                os.makedirs(raw_frames_dir_path, exist_ok=True)
++                manifest_records = []
++                for index, sample in enumerate(frame_samples):
++                    if not isinstance(sample, (list, tuple)) or len(sample) != 2:
++                        continue
++                    sample_ts, sample_frame = sample
++                    frame_filename = f"{index:05d}.jpg"
++                    frame_path = os.path.join(raw_frames_dir_path, frame_filename)
++                    cv2.imwrite(frame_path, sample_frame)
++                    manifest_records.append({
++                        "index": index,
++                        "timestamp": float(sample_ts) if sample_ts is not None else None,
++                        "file": self._path_for_output(frame_path),
++                    })
++                if manifest_records:
++                    frame_manifest_path = os.path.join(raw_frames_dir_path, "frames.json")
++                    with open(frame_manifest_path, 'w', encoding='utf-8') as fp:
++                        json.dump({
++                            "evidence_id": evidence_id,
++                            "event_id": event_id,
++                            "frame_count": len(manifest_records),
++                            "frames": manifest_records,
++                        }, fp, ensure_ascii=False, indent=2)
++
+             package_record = {
+                 'evidence_id': evidence_id,
+                 'event_id': event_id,
+@@ -286,6 +320,8 @@ class FileManager:
+                 },
+                 'clip_path': self._path_for_output(clip_path),
+                 'screenshot_path': self._path_for_output(screenshot_path),
++                'raw_frames_dir': self._path_for_output(raw_frames_dir_path),
++                'frame_manifest_path': self._path_for_output(frame_manifest_path),
+                 'frame_count': len(frames),
+                 'fps': fps_value,
+                 'created_at': datetime.now().isoformat(),
+diff --git a/src/version.py b/src/version.py
+index 7619948..85e07a3 100755
+--- a/src/version.py
++++ b/src/version.py
+@@ -1,5 +1,5 @@
+ """版本信息管理模块"""
+-__version__ = "3.8.0"
++__version__ = "4.0.0"
+ 
+ def get_version():
+     """获取当前版本号"""
