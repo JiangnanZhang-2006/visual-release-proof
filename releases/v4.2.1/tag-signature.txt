@@ -1,0 +1,503 @@
+tag v4.2.1
+Tagger: JiangnanZhang-2006 <zjn.2006@foxmail.com>
+Date:   Thu Mar 19 16:57:37 2026 +0800
+
+Release v4.2.1
+-----BEGIN PGP SIGNATURE-----
+
+iQJPBAABCAA5FiEEen89XXfEA5uGCvoQGGdwMHAF5NwFAmm7uoEbFIAAAAAABAAO
+bWFudTIsMi41KzEuMTIsMCwzAAoJEBhncDBwBeTcnCEQALq1fRnINokfx+a6NTj1
+RchfXRg50M4sTpdgRABarV7I0o2gxLk0pRoPfl9E5AeMmWRvUD7JbKROWygb56wt
+GN7RgRdSMwQU3xksCmPgLkQuomK3bXSkDR8H6CBNGXc2zjhXujQwOXZYyKJOBQja
+TBeqABjgvb5xOnovfxTyHsZByl/RQEo3fZDIOj+ISBTcNxfJUZMJ8GG6xrz1hyuH
+XUJPkYvPIPmVu4CaQfc/YCjza24kL4yxy+kIRP5ohCUuuQNN68qNomK6lNYsbUQ1
+2gup8U+zNNNMcY05koUwQjS5JplyO9r3evVBWgeP3gZHsKuo8U5rIOgYFCyvV6GB
+rJfyxo0jhr9a/ZUd8YXxCkntI0dZxlMA8SyOmNcx6Gu8vLrRs4Q//8Go9uGYfaX9
+Y0MXXQkZtAPDGMrLWE65okA/8clNjAUBiaOONiJkfq4n31JlA2yNJxhRiQXL5GhR
+Dl6f8fklSEsDxp1UQdv7ifd2MG1Ql0kBnIxkQYILHetNbycajK8DRhSScVcQjTCN
+U2Cx0B0crUwlgR7LDJvAhkGRux03pkgg13EtO/uLbxArZpRb363Q77wm7VOkGi/M
+QdVW9YX9NQkYfYGuumTiF/1pwj4lqtGQ4DYSJDuV7xDl0W7Vxd8YwjpvZOuBfnbV
+uTZK134a4ziBlqj5imCt1K/n
+=ArUt
+-----END PGP SIGNATURE-----
+
+commit fe4915280feefb34cf7498f41fe9eae995c308f0
+gpg: 签名建立于 四  3月/19 16:57:29 2026 CST
+gpg:               使用 RSA 密钥 7A7F3D5D77C4039B860AFA10186770307005E4DC
+gpg: 完好的签名，来自于 “Jiangnan Zhang (Visual Release Signing) <zjn.2006@foxmail.com>” [绝对]
+Author: JiangnanZhang-2006 <zjn.2006@foxmail.com>
+Date:   Thu Mar 19 16:57:29 2026 +0800
+
+    release: v4.2.1 Widen Python support to 3.14 and make mediapipe optional
+    
+    Python constraint relaxed from <3.13 to <3.15 so users on 3.13/3.14 can
+    install directly.  mediapipe is now an optional extra; core YOLO detection
+    chain works without it.  Fixed broken doc links in guides/QUICK_START.md.
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 8d55a5b..1691567 100755
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,21 @@
+ # 更新日志
+ 
++## [4.2.1] - 2026-03-19
++
++### 变更
++
++- ⚙️ **Python 版本约束放宽至 3.14（向后兼容）**
++  - `pyproject.toml` Python 上界从 `<3.13` 放宽到 `<3.15`，支持 Python 3.13 / 3.14 环境安装运行
++  - `mediapipe` 改为可选依赖（`optional = true`），3.13+ 环境无 wheel 时核心检测链路不受影响
++  - 安装方式：核心 `poetry install`，含 MediaPipe `poetry install -E mediapipe`
++
++### 修复
++
++- 🐛 修复 `guides/QUICK_START.md` 底部相关文档链接路径缺少 `../` 前缀导致 404 的问题
++- 🐛 同步 `guides/QUICK_START.md` 内容到当前 Poetry + WebUI 主流程，替换过时的 pip / PowerShell 说明
++
++---
++
+ ## [4.2.0] - 2026-03-19
+ 
+ ### 变更
+diff --git a/README.md b/README.md
+index 2c63dd6..6cffe66 100755
+--- a/README.md
++++ b/README.md
+@@ -2,7 +2,7 @@
+ 
+ 基于 YOLO（当前默认 YOLO26）和 MediaPipe 的实时监考作弊检测系统，支持多种作弊行为检测，默认以 WebUI 方式运行。
+ 
+-当前版本：`v4.2.0`
++当前版本：`v4.2.1`
+ 
+ ## ✨ 特性
+ 
+@@ -15,13 +15,13 @@
+ 
+ ## 📋 系统要求
+ 
+-- **Python**: 3.10+ (推荐 3.10 或 3.11)
++- **Python**: 3.10 ~ 3.14 (推荐 3.11 或 3.12)
+ - **操作系统**: macOS / Windows 10/11 (64位)
+ - **内存**: 至少 4GB (推荐 8GB+)
+ - **摄像头**: 支持 USB 摄像头或内置摄像头
+ - **网络**: 首次安装需要网络连接下载依赖
+ 
+-> 💡 **Python 版本说明**: 推荐使用 Python 3.10 或 3.11 以获得最佳兼容性。Python 3.13+ 可能遇到依赖包兼容性问题。详细说明请参考 [Python 版本要求](PYTHON_VERSION.md)
++> 💡 **Python 版本说明**: 推荐 3.11 或 3.12 以获得最佳兼容性。3.13/3.14 可正常运行核心检测链路，但 MediaPipe 可能尚未发布对应 wheel——项目会自动降级为纯 YOLO 模式运行。如需 MediaPipe 能力，请使用 `poetry install -E mediapipe`。
+ 
+ ## ⚠️ 重要提示
+ 
+diff --git a/VERSION b/VERSION
+index 6aba2b2..fae6e3d 100755
+--- a/VERSION
++++ b/VERSION
+@@ -1 +1 @@
+-4.2.0
++4.2.1
+diff --git a/config/config.yaml b/config/config.yaml
+index 22b10f8..89d28a9 100755
+--- a/config/config.yaml
++++ b/config/config.yaml
+@@ -383,7 +383,7 @@ models:
+     tensorrt_path: null
+     use_half_precision: true
+ cpu_acceleration:
+-  mode: baseline
++  mode: fast
+   profiles:
+     baseline:
+       pose_model_path: yolo26s-pose.pt
+diff --git a/guides/QUICK_START.md b/guides/QUICK_START.md
+index d3dd717..7aa8d03 100755
+--- a/guides/QUICK_START.md
++++ b/guides/QUICK_START.md
+@@ -2,86 +2,92 @@
+ 
+ ## 项目简介
+ 
+-监考作弊检测系统基于 YOLOv13 和 MediaPipe，支持多种作弊行为检测，包括：
+-- 手机检测
+-- 头部转动检测
+-- 频繁转头检测
++监考作弊检测系统基于 YOLO（当前默认 YOLO26）和 MediaPipe，默认以 WebUI 方式运行，支持多种作弊行为检测：
++
++- 手机检测（支持多目标并行渲染）
++- 头部转动 / 频繁转头检测
+ - 多人检测
+ - 异常姿态检测
++- 手部位置分析
+ - 传递纸条检测 (FSM)
+ 
+-系统采用模块化设计，支持多线程处理、性能优化和实时监控。
+-
+ ## 快速开始
+ 
+ ### 0. 首次部署（新电脑）
+ 
+-**重要**: 项目文件通过 OneDrive 同步，但 Python 环境和依赖需要在新电脑上重新安装。
++如果电脑没有安装 Python，请参考 [部署指南](../docs/DEPLOYMENT.md) 进行完整部署。
+ 
+-#### 情况 1: 已安装 Python（推荐）
++**推荐部署（Poetry）**：
+ 
+-使用智能安装脚本（自动检测 Python 环境）：
+-```powershell
+-# 自动检测并使用系统 Python 或 conda base 环境
+-# 如果遇到"禁止运行脚本"错误，使用: powershell -ExecutionPolicy Bypass -File install_dependencies.ps1
+-.\install_dependencies.ps1
++```bash
++# 1) 安装 Poetry（仅首次）
++python -m pip install poetry
++
++# 2) 安装依赖（自动创建并管理虚拟环境）
++poetry install
+ ```
+ 
+-#### 情况 2: 未安装 Python
++> 建议：不要提交或跨系统复用虚拟环境目录；Poetry 会按本机创建独立环境。
++
++### 1. 依赖安装（Poetry 为主）
+ 
+-请参考 [部署指南](../docs/DEPLOYMENT.md) 进行完整部署，或：
+-1. 下载并安装 Python: https://www.python.org/downloads/
+-2. 或安装 Anaconda: https://www.anaconda.com/download
+-3. 然后运行 `.\install_dependencies.ps1`
++#### macOS / Linux
+ 
+-### 1. 安装依赖
++```bash
++poetry install
++poetry run python main.py
++```
++
++#### Windows (PowerShell)
+ 
+ ```powershell
+-# 推荐方式: 智能安装脚本（自动检测 Python 环境）
+-# 脚本会自动检测并使用系统 Python 或 conda 环境
+-powershell -ExecutionPolicy Bypass -File install_dependencies.ps1
++poetry install
++poetry run python main.py
++```
+ 
+-# 备选方式: 手动安装
+-# 配置国内镜像（首次需要）
+-pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+-pip config set global.trusted-host pypi.tuna.tsinghua.edu.cn
++#### 网络不稳定时
+ 
+-# 安装依赖
+-pip install -r requirements.txt
++```bash
++poetry install --no-cache
+ ```
+ 
+-**注意**: 如果遇到安装问题，请查看 `fixes/` 目录下的修复脚本。
++> 过渡说明：`requirements*.txt` 仍保留为应急入口，主流程以 Poetry 为准。
+ 
+-### 2. 运行主程序
++### 2. 启动 WebUI（默认主程序）
+ 
+-```powershell
+-python main.py
++```bash
++poetry run python main.py
+ ```
+ 
+-### 3. 启动 Web API 服务（可选）
++启动后访问：
+ 
+-```powershell
+-# 方式1: 使用便捷脚本
+-python run_api.py
++- WebUI: <http://127.0.0.1:8000/webui>
++- API 文档: <http://127.0.0.1:8000/docs>
+ 
+-# 方式2: 使用 uvicorn
+-uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+-```
++### 3. 仅启动 Web API（调试）
+ 
+-访问 API 文档: http://localhost:8000/docs
++```bash
++poetry run python run_api.py
++# 或
++poetry run uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
++```
+ 
+ ## 操作说明
+ 
+-### 主程序操作
++### WebUI 操作
+ 
+-- **Q键**: 退出程序
++- **开始检测** / **停止检测**：控制检测会话
++- **参数调整**：判定阈值、推理间隔、JPEG 质量等实时可调
++- **保存参数**：部分参数（如推理间隔）需点击保存后生效
++- **证据导出**：支持事件视频与原始帧序列导出
+ 
+ ### 性能监控
+ 
+-程序运行时会实时显示：
+-- FPS（帧率）
+-- 检测时间
+-- 检测状态
++WebUI 面板实时显示：
++
++- 会话帧数 / 检测告警数
++- 当前 FPS / 单帧耗时
++- 摄像头与舞台分辨率
+ 
+ ## 配置说明
+ 
+@@ -90,71 +96,42 @@ uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+ - **模型配置**: YOLO 和 MediaPipe 模型参数
+ - **检测阈值**: 各种检测的敏感度
+ - **摄像头设置**: 分辨率、帧率等
+-- **线程配置**: 队列大小、历史记录长度
+ - **融合决策**: 多特征融合参数
+ - **FSM 检测**: 多步骤行为检测参数
+-
+-## 功能特性
+-
+-### 检测功能
+-
+-- ✅ 手机检测
+-- ✅ 头部转动检测
+-- ✅ 频繁转头检测
+-- ✅ 多人检测
+-- ✅ 异常姿态检测
+-- ✅ 手部位置分析
+-- ✅ 传递纸条检测 (FSM)
+-
+-### 系统特性
+-
+-- ✅ 多特征融合决策
+-- ✅ 实时性能监控
+-- ✅ 日志记录
+-- ✅ Web API 服务
+-- ✅ 配置化管理
++- **证据采集**: 前后窗口、导出开关
+ 
+ ## 故障排除
+ 
+ ### 问题：程序运行慢
+ 
+-**解决方案**：
+ 1. 在 `config/config.yaml` 中降低摄像头分辨率
+-2. 降低 MediaPipe 模型复杂度（`model_complexity: 0`）
++2. 切换到 `cpu_acceleration.mode: fast` 档位
+ 3. 关闭不必要的检测功能
+ 
+-### 问题：内存占用高
+-
+-**解决方案**：
+-1. 减少历史记录长度（`history_maxlen`）
+-2. 减小帧队列大小（`frame_queue_size`）
+-3. 定期清理日志文件
+-
+ ### 问题：检测不准确
+ 
+-**解决方案**：
+ 1. 调整检测阈值（`detection_thresholds`）
+-2. 改善光照条件
+-3. 调整摄像头角度
+-4. 调整融合决策阈值（`fusion_threshold`）
++2. 调整融合决策阈值（`fusion_threshold`）
++3. 改善光照条件和摄像头角度
+ 
+ ### 问题：摄像头无法打开
+ 
+-**解决方案**：
+ 1. 检查摄像头是否被其他程序占用
+-2. 在 `config/config.yaml` 中修改 `device_id`
+-3. 检查摄像头驱动是否正常
++2. 在 `config/config.yaml` 中修改 `camera.device_id`
++3. 检查浏览器是否已授权摄像头访问
+ 
+-## 下一步
++### macOS 26 + NumPy 崩溃
+ 
+-1. **熟悉功能**: 运行程序，了解各项检测功能
+-2. **调整参数**: 根据实际场景调整 `config/config.yaml` 中的参数
+-3. **使用 API**: 尝试使用 Web API 服务
+-4. **查看文档**: 阅读详细文档了解高级功能
++```bash
++poetry run python -m pip install -U numpy
++poetry install
++```
+ 
+ ## 相关文档
+ 
+-- [README.md](README.md) - 项目主文档
+-- [项目结构说明](PROJECT_STRUCTURE.md) - 代码架构
+-- [API 使用指南](API_GUIDE.md) - Web API 文档
+-- [详细文档](docs/README.md) - 所有技术文档
++- [README](../README.md) - 项目主文档
++- [项目结构说明](../PROJECT_STRUCTURE.md) - 代码架构
++- [API 使用指南](../docs/API_GUIDE.md) - Web API 文档
++- [部署指南](../docs/DEPLOYMENT.md) - 安装部署
++- [更新日志](../CHANGELOG.md) - 版本发布记录
++- [详细文档目录](../docs/README.md) - 所有技术文档
+diff --git a/poetry.lock b/poetry.lock
+index 0074afc..4c2d7ee 100644
+--- a/poetry.lock
++++ b/poetry.lock
+@@ -4,9 +4,10 @@
+ name = "absl-py"
+ version = "2.4.0"
+ description = "Abseil Python Common Libraries, see https://github.com/abseil/abseil-py."
+-optional = false
++optional = true
+ python-versions = ">=3.10"
+ groups = ["main"]
++markers = "extra == \"mediapipe\""
+ files = [
+     {file = "absl_py-2.4.0-py3-none-any.whl", hash = "sha256:88476fd881ca8aab94ffa78b7b6c632a782ab3ba1cd19c9bd423abc4fb4cd28d"},
+     {file = "absl_py-2.4.0.tar.gz", hash = "sha256:8c6af82722b35cf71e0f4d1d47dcaebfff286e27110a99fc359349b247dfb5d4"},
+@@ -72,9 +73,10 @@ files = [
+ name = "cffi"
+ version = "2.0.0"
+ description = "Foreign Function Interface for Python calling C code."
+-optional = false
++optional = true
+ python-versions = ">=3.9"
+ groups = ["main"]
++markers = "extra == \"mediapipe\""
+ files = [
+     {file = "cffi-2.0.0-cp310-cp310-macosx_10_13_x86_64.whl", hash = "sha256:0cf2d91ecc3fcc0625c2c530fe004f82c110405f101548512cce44322fa8ac44"},
+     {file = "cffi-2.0.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:f73b96c41e3b2adedc34a7356e64c8eb96e03a3782b535e043a986276ce12a49"},
+@@ -534,9 +536,10 @@ files = [
+ name = "flatbuffers"
+ version = "25.12.19"
+ description = "The FlatBuffers serialization format for Python"
+-optional = false
++optional = true
+ python-versions = "*"
+ groups = ["main"]
++markers = "extra == \"mediapipe\""
+ files = [
+     {file = "flatbuffers-25.12.19-py2.py3-none-any.whl", hash = "sha256:7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4"},
+ ]
+@@ -1230,9 +1233,10 @@ files = [
+ name = "mediapipe"
+ version = "0.10.32"
+ description = "MediaPipe is the simplest way for researchers and developers to build world-class ML solutions and applications for mobile, edge, cloud and the web."
+-optional = false
++optional = true
+ python-versions = "*"
+ groups = ["main"]
++markers = "extra == \"mediapipe\""
+ files = [
+     {file = "mediapipe-0.10.32-py3-none-macosx_11_0_arm64.whl", hash = "sha256:b62178b7585e0bb8789075c43bbb3e352fbc4a8f765797fded509f86a098b29b"},
+     {file = "mediapipe-0.10.32-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:4b0941fbbbce41862f13cb1850c4878c13dbc62cd5e81e74880051b7a20ce3b6"},
+@@ -1575,9 +1579,10 @@ files = [
+ name = "opencv-contrib-python"
+ version = "4.13.0.92"
+ description = "Wrapper package for OpenCV python bindings."
+-optional = false
++optional = true
+ python-versions = ">=3.6"
+ groups = ["main"]
++markers = "extra == \"mediapipe\""
+ files = [
+     {file = "opencv_contrib_python-4.13.0.92-cp37-abi3-macosx_13_0_arm64.whl", hash = "sha256:53c8ab81376210dda5836307eb6bda7266f39a3820a9a070c7131510ba815fe1"},
+     {file = "opencv_contrib_python-4.13.0.92-cp37-abi3-macosx_14_0_x86_64.whl", hash = "sha256:1973d0fc773873f9d1b5bf0d1b65895da2f47b06ba033b7d58393f5c28ba0778"},
+@@ -1852,10 +1857,10 @@ test = ["psleak", "pytest", "pytest-instafail", "pytest-xdist", "pywin32 ; os_na
+ name = "pycparser"
+ version = "3.0"
+ description = "C parser in Python"
+-optional = false
++optional = true
+ python-versions = ">=3.10"
+ groups = ["main"]
+-markers = "implementation_name != \"PyPy\""
++markers = "extra == \"mediapipe\" and implementation_name != \"PyPy\""
+ files = [
+     {file = "pycparser-3.0-py3-none-any.whl", hash = "sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992"},
+     {file = "pycparser-3.0.tar.gz", hash = "sha256:600f49d217304a5902ac3c37e1281c9fe94e4d0489de643a9504c5cdfdfc6b29"},
+@@ -2456,7 +2461,7 @@ description = "Most extensible Python build backend with support for C/C++ exten
+ optional = false
+ python-versions = ">=3.9"
+ groups = ["main"]
+-markers = "python_version == \"3.12\""
++markers = "python_version >= \"3.12\""
+ files = [
+     {file = "setuptools-82.0.1-py3-none-any.whl", hash = "sha256:a59e362652f08dcd477c78bb6e7bd9d80a7995bc73ce773050228a348ce2e5bb"},
+     {file = "setuptools-82.0.1.tar.gz", hash = "sha256:7d872682c5d01cfde07da7bccc7b65469d3dca203318515ada1de5eda35efbf9"},
+@@ -2499,9 +2504,10 @@ files = [
+ name = "sounddevice"
+ version = "0.5.5"
+ description = "Play and Record Sound with Python"
+-optional = false
++optional = true
+ python-versions = ">=3.7"
+ groups = ["main"]
++markers = "extra == \"mediapipe\""
+ files = [
+     {file = "sounddevice-0.5.5-py3-none-any.whl", hash = "sha256:30ff99f6c107f49d25ad16a45cacd8d91c25a1bcdd3e81a206b921a3a6405b1f"},
+     {file = "sounddevice-0.5.5-py3-none-macosx_10_6_x86_64.macosx_10_6_universal2.whl", hash = "sha256:05eb9fd6c54c38d67741441c19164c0dae8ce80453af2d8c4ad2e7823d15b722"},
+@@ -3193,7 +3199,10 @@ files = [
+     {file = "websockets-16.0.tar.gz", hash = "sha256:5f6261a5e56e8d5c42a4497b364ea24d94d9563e8fbd44e78ac40879c60179b5"},
+ ]
+ 
++[extras]
++mediapipe = ["mediapipe"]
++
+ [metadata]
+ lock-version = "2.1"
+-python-versions = ">=3.10,<3.13"
+-content-hash = "af9c2a24eb603878cd21fd2fbf5a8c6071df48eed3a816f057bd57d5978ded6d"
++python-versions = ">=3.10,<3.15"
++content-hash = "17e99687ad722a84b56d00d7ab6597557fce516a78afbbe64d475741d5c9d3a7"
+diff --git a/pyproject.toml b/pyproject.toml
+index 7429d52..41ee822 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -1,10 +1,10 @@
+ [project]
+ name = "visual-cheating-detection"
+-version = "4.2.0"
++version = "4.2.1"
+ description = "Real-time proctoring and cheating detection system."
+ readme = "README.md"
+ authors = [{ name = "Visual Team" }]
+-requires-python = ">=3.10,<3.13"
++requires-python = ">=3.10,<3.15"
+ dynamic = ["dependencies"]
+ 
+ [project.scripts]
+@@ -14,7 +14,7 @@ visual-main = "main:main"
+ package-mode = false
+ 
+ [tool.poetry.dependencies]
+-python = ">=3.10,<3.13"
++python = ">=3.10,<3.15"
+ opencv-python = ">=4.8.0"
+ numpy = ">=2.2.0"
+ ultralytics = ">=8.0.0"
+@@ -28,7 +28,10 @@ pynput = ">=1.7.6"
+ python-xlib = { version = ">=0.33", markers = "platform_system == 'Linux'" }
+ matplotlib = ">=3.7.0"
+ huggingface_hub = ">=0.20.0"
+-mediapipe = "^0.10.32"
++mediapipe = { version = ">=0.10.20", optional = true }
++
++[tool.poetry.extras]
++mediapipe = ["mediapipe"]
+ 
+ [tool.poetry.group.dev.dependencies]
+ pytest = ">=9.0.0"
+diff --git a/src/version.py b/src/version.py
+index 28ffc1b..3cdb993 100755
+--- a/src/version.py
++++ b/src/version.py
+@@ -1,5 +1,5 @@
+ """版本信息管理模块"""
+-__version__ = "4.2.0"
++__version__ = "4.2.1"
+ 
+ def get_version():
+     """获取当前版本号"""
