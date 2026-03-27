@@ -8,10 +8,11 @@
 
 ## 最新版本
 
-- `v4.4.0`
+- `v4.6.0`
 
 ## 已发布版本
 
+- `v4.6.0`: `releases/v4.6.0/`
 - `v4.4.0`: `releases/v4.4.0/`
 - `v4.3.0`: `releases/v4.3.0/`
 - `v4.2.1`: `releases/v4.2.1/`
@@ -23,13 +24,13 @@
 
 ## 交付包信息
 
-- 私有源码交付包：`visual-v4.4.0.zip`
-- SHA256：`055366b1c4c01eabaa85f0bd4c9f3e07b52b76fbbe30a050695e95efc0144d24`
+- 私有源码交付包：`visual-v4.6.0.zip`
+- SHA256：`fac9ca52deea9ac644613090098c66e594661796705904654bc9668074818bb7`
 - 本仓库仅公开签名证明材料，不托管源码压缩包
 
 ## 第三方验证
 
-1. 下载目标版本目录中的公钥（示例：`releases/v4.4.0/public-key.asc`）
+1. 下载目标版本目录中的公钥（示例：`releases/v4.6.0/public-key.asc`）
 2. 执行：
    - `gpg --import public-key.asc`
    - `git verify-tag vX.Y.Z`
